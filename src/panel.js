@@ -468,7 +468,9 @@
     });
 
     els.popout.addEventListener("click", function () {
-      if (!TC.enterPopout()) toast("Open a channel or VOD first.");
+      var result = TC.enterPopout();
+      if (result === "blocked") toast("Pop-up blocked \u2014 allow pop-ups for twitch.tv, then try again.");
+      else if (!result) toast("Open a channel or VOD first.");
     });
 
     els.reset.addEventListener("click", function () {
@@ -754,8 +756,8 @@
     shadow.appendChild(style);
     var btn = document.createElement("div");
     btn.className = "returnbar";
-    btn.textContent = "\u21a9 Normal view";
-    btn.title = "Take this window back to the normal Twitch page";
+    btn.textContent = "\u2715 Close";
+    btn.title = "Close this window and go back to Twitch";
     btn.addEventListener("click", function () {
       TC.returnFromPopout(url);
     });

@@ -119,20 +119,39 @@
     TC.removeStored(POP_KEY);
   }
 
-  // Turn *this* window into the cropped, player-only view.
+  // Open the cropped, player-only view in its own window, sized to the crop.
+  // A real window is the only thing that can hide the browser chrome *and* be
+  // resized to the crop; a normal tab can do neither.
   TC.enterPopout = function () {
     var url = TC.popoutUrl();
     if (!url) return false;
+    var size = TC.popoutSize();
     savePopoutRequest();
-    location.href = url;
+    var features =
+      "width=" + size.width + ",height=" + size.height +
+      ",toolbar=no,menubar=no,scrollbars=no,location=no,status=no,resizable=yes";
+    var win = null;
+    try {
+      win = window.open(url, "_blank", features);
+    } catch (e) {}
+    if (!win) {
+      clearPopoutRequest();
+      return "blocked";
+    }
     return true;
   };
 
-  // Take this window back to the normal Twitch page, switched on again.
+  // Leave the popout: close the window, or fall back to navigating if the
+  // browser will not let us close it.
   TC.returnFromPopout = function (url) {
     clearPopoutRequest();
-    var target = url || "https://www.twitch.tv/";
-    location.href = target + (target.indexOf("#") === -1 ? RETURN_HASH : "");
+    try {
+      window.close();
+    } catch (e) {}
+    setTimeout(function () {
+      var target = url || "https://www.twitch.tv/";
+      location.href = target + (target.indexOf("#") === -1 ? RETURN_HASH : "");
+    }, 250);
   };
 
   function consumeReturnHash() {
@@ -266,8 +285,12 @@
           // left completely alone, so "off by default" still holds.
           if (!req || !req.ts || Date.now() - req.ts > 3600000) return;
           setActive(true);
+          // window.open's width/height include browser chrome, so correct for
+          // it and make the *content* match the crop exactly.
           try {
-            window.resizeTo(req.w, req.h);
+            var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
+            var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
+            window.resizeTo(req.w + chromeW, req.h + chromeH);
           } catch (e) {}
           TC.ui.showReturnBar(req.url || null);
         })

@@ -22,8 +22,8 @@ of a VOD or clip.
   times).
 - **Unload chat** to take the whole chat column out of the page. Twitch's own
   hide button only *hides* it, leaving it mounted and running.
-- **A crop-shaped window** — turns *the current window* into Twitch's
-  player-only view at the shape of your crop, with one button to get back.
+- **A crop-shaped window** — opens Twitch's player-only view in a clean window
+  sized to your crop, with no address bar and no site chrome.
 - **Reset everything** with one button in the panel footer.
 - **Keyboard shortcuts:** `Alt+Shift+P` shows/hides the panel, `Alt+Shift+C`
   turns the whole extension on/off. Both are re-bindable in `about:addons` → gear →
@@ -105,17 +105,17 @@ It cannot close Twitch's connection to chat — only Twitch can unmount its own
 component — so treat this as a rendering/CPU saving, not a full teardown. If the
 chat ever comes back empty, press **Load chat** and, if needed, reload the page.
 
-**Cropping the current window**
+**Popping out a crop-shaped window**
 
-**Crop → Pop out cropped window** turns *this* window into Twitch's player-only
-view — no chat, no site chrome — and asks it to resize to the shape of your crop,
-so the stream fills it with no letterbox bars. It is Twitch's own popout, so
-playback, quality and ads behave normally; only the window size is ours.
+**Crop → Pop out cropped window** opens Twitch's player-only view in its own
+window — no chat, no address bar, no site chrome — sized to the shape of your
+crop, so the stream fills it with no letterbox bars. It is Twitch's own popout,
+so playback, quality and ads behave normally; only the window size is ours.
 
-A **↩ Normal view** button sits in the top-right to take the window back to the
-normal Twitch page, switched on again. Browsers often refuse to resize a window
-they did not open, so if the window does not change shape, drag it to size by
-hand — the crop is a "fit", so it fills whatever shape the window is.
+A real window (not a tab) is the only way to get both the hidden browser chrome
+and the crop-shaped sizing; a normal tab can do neither. A small **✕ Close**
+button sits in the top-right, and closing the window leaves you on your normal
+Twitch tab. If nothing opens, allow pop-ups for `twitch.tv`.
 
 **Reset**
 
