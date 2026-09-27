@@ -374,6 +374,12 @@
     // flashes the uncropped picture for a frame, once per reconcile tick.
     if (!video) return false;
 
+    // Without the video's own size we cannot know where the picture actually
+    // sits inside the element (object-fit may be letterboxing it), so the crop
+    // would be measured against the wrong box and show a larger area than
+    // selected. Treat it as transient and leave the last good crop alone.
+    if (!video.videoWidth || !video.videoHeight) return false;
+
     if (TC.state.marked && TC.state.marked !== video) {
       try {
         TC.state.marked.removeAttribute(CROP_ATTR);

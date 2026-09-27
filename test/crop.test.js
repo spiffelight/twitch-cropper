@@ -218,6 +218,26 @@ const afterReapply = root.writes;
 TC.applyCrop();
 ok("then goes quiet again", root.writes === afterReapply);
 
+console.log("\nno intrinsic size must not move the crop");
+const vGood = makeVideo(1000, 1000, 1920, 1080);
+TC.state.video = vGood;
+TC.state.crop = { enabled: true, x: 0.2, y: 0.1, w: 0.4, h: 0.5, mode: "fit" };
+TC.applyCrop();
+const keptOx = root.props["--tc-ox"];
+const keptClip = root.props["--tc-ct"];
+ok("applied against the real picture", vGood.getAttribute("data-tc-target") === "1");
+
+const vNoSize = makeVideo(1000, 1000, 0, 0);
+TC.state.video = vNoSize;
+TC.applyCrop();
+ok("a video reporting no intrinsic size is left alone", vNoSize.getAttribute("data-tc-target") === null);
+ok("and the already-applied crop is untouched", root.props["--tc-ox"] === keptOx && root.props["--tc-ct"] === keptClip);
+
+const vBack = makeVideo(1000, 1000, 1920, 1080);
+TC.state.video = vBack;
+TC.applyCrop();
+ok("and it crops again once the size is known", vBack.getAttribute("data-tc-target") === "1");
+
 console.log("\ntransient problems must never un-crop (the once-a-second flash)");
 TC.state.video = makeVideo(1000, 1000, 1920, 1080);
 TC.state.crop = { enabled: true, x: 0.1, y: 0.1, w: 0.5, h: 0.5, mode: "fit" };

@@ -256,7 +256,14 @@ for (let i = 0; i < 5000; i++) {
   if (threw) { fail("applyCrop threw", { i, error: threw }); continue; }
 
   if (root.attrs["data-tc-crop"] === "on") {
-    ok(v.attributes["data-tc-target"] === "1", "target marked when cropping", v.attributes);
+    // The flag may still be on from an earlier video: a video with no intrinsic
+    // size is deliberately left alone rather than un-cropped, so it must not be
+    // marked either.
+    if (v.videoWidth && v.videoHeight) {
+      ok(v.attributes["data-tc-target"] === "1", "target marked when cropping", v.attributes);
+    } else {
+      ok(v.attributes["data-tc-target"] === undefined, "no-size video left unmarked", v.attributes);
+    }
     for (const k of VARS) ok(isFinite(num(root.props[k])), "css var is a finite number: " + k, root.props[k]);
   } else {
     ok(v.attributes["data-tc-target"] === undefined, "target unmarked when not cropping");
