@@ -123,6 +123,10 @@
     '      <div class="hint" id="loopHint"></div>' +
     "    </div>" +
     '    <div class="hint" id="liveNote" style="display:none">Looping works on VODs and clips. Live streams can\u2019t be looped \u2014 cropping still works.</div>' +
+    '    <div class="sep"></div>' +
+    '    <div class="sec">Chat</div>' +
+    '    <button class="btn" id="chatToggle">Unload chat</button>' +
+    '    <div class="hint" id="chatHint"></div>' +
     "  </div>" +
     '  <div class="foot"><span id="scope">Not saved yet</span><button class="link" id="clear">Clear</button></div>' +
     "</div>";
@@ -305,6 +309,7 @@
       els.loopWrap.classList.toggle("disabled", !canLoop);
       els.liveNote.style.display = canLoop ? "none" : "";
       updateCropHint();
+      updateChatUI();
     } finally {
       syncing = false;
     }
@@ -439,6 +444,8 @@
     els.loopCount = shadow.getElementById("loopCount");
     els.loopHint = shadow.getElementById("loopHint");
     els.liveNote = shadow.getElementById("liveNote");
+    els.chatToggle = shadow.getElementById("chatToggle");
+    els.chatHint = shadow.getElementById("chatHint");
     els.scope = shadow.getElementById("scope");
     els.clear = shadow.getElementById("clear");
 
@@ -588,10 +595,30 @@
       els.scope.textContent = "Cleared for this page";
     });
 
+    els.chatToggle.addEventListener("click", function () {
+      TC.chat.toggle();
+      updateChatUI();
+    });
+
     drag(panelHost, els.head, function (pos) {
       uiSettings.panelPos = pos;
       persistUI();
     });
+  }
+
+  function updateChatUI() {
+    if (!els.chatToggle) return;
+    var unloaded = TC.chat.isUnloaded();
+    els.chatToggle.textContent = unloaded ? "Load chat" : "Unload chat";
+    if (!TC.chat.available()) {
+      els.chatToggle.classList.add("disabled");
+      els.chatHint.textContent = "No chat on this page.";
+    } else {
+      els.chatToggle.classList.remove("disabled");
+      els.chatHint.textContent = unloaded
+        ? "Chat is detached from the page."
+        : "Removes the chat column from the page.";
+    }
   }
 
   function updateLoopHint() {

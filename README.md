@@ -17,6 +17,8 @@ of a VOD or clip.
 - **Loop a segment** on VODs and clips: set a start and stop time and it jumps
   back to the start each time it reaches the stop (optionally a fixed number of
   times).
+- **Unload chat** to take the whole chat column out of the page. Twitch's own
+  hide button only *hides* it, leaving it mounted and running.
 - **Keyboard shortcuts:** `Alt+Shift+P` shows/hides the panel, `Alt+Shift+C`
   turns cropping on/off. Both are re-bindable in `about:addons` → gear →
   *Manage Extension Shortcuts*.
@@ -79,6 +81,19 @@ panel footer forgets them.
 The stop time is optional: leave it blank to loop from the start to the end of
 the video.
 
+**Unloading chat**
+
+Twitch's own hide-chat button is purely visual — the chat component stays mounted
+and its messages stay in the DOM. The panel's **Chat → Unload chat** button
+instead detaches the whole chat column from the document, which removes it (and
+roughly 80% of the page's DOM nodes) and stops it being laid out and painted.
+**Load chat** puts it back. The choice is remembered, so it is re-applied on
+other Twitch pages.
+
+It cannot close Twitch's connection to chat — only Twitch can unmount its own
+component — so treat this as a rendering/CPU saving, not a full teardown. If the
+chat ever comes back empty, press **Load chat** and, if needed, reload the page.
+
 ## How the crop actually works
 
 Twitch's player is a `<video>` element inside a container that is exactly the size
@@ -123,6 +138,7 @@ DRM-protected content — so this extension deliberately doesn't do that.
 ```
 manifest.json         Firefox MV3 manifest
 src/core.js           namespace, storage, page/video discovery, crop engine
+src/chat.js           chat unload / load
 src/loop.js           VOD/clip segment looping
 src/panel.js          Shadow-DOM panel, launcher button, drag-to-select overlay
 src/main.js           bootstrap, SPA navigation, resize/reconcile

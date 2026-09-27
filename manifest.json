@@ -22,6 +22,7 @@
       ],
       "js": [
         "src/core.js",
+        "src/chat.js",
         "src/loop.js",
         "src/panel.js",
         "src/main.js"

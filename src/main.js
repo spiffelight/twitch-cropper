@@ -133,6 +133,7 @@
         TC.state.scopeId = null;
         applyScope();
       }
+      TC.chat.reconcile();
       queueReconcile();
     }, 800);
 
@@ -171,6 +172,9 @@
       })
       .catch(function () {
         TC.ui.init(null);
+      })
+      .then(function () {
+        return TC.chat.init();
       })
       .then(start);
   }
