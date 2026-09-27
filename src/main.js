@@ -184,18 +184,24 @@
   /* ------------------------------------------------------------- reconcile */
 
   function reconcile() {
-    // Stick with the video we are already cropping while it is still on screen.
-    // Twitch can briefly add a second <video> (ads, previews) and re-picking on
-    // every tick makes the crop jump between elements and flash.
+    // Stick with the video we are already cropping while it is still on screen,
+    // and only switch when a replacement is actually found. Dropping the video
+    // because it momentarily looks unavailable is what flashes the crop off.
     var v = TC.state.video;
-    if (!v || !TC.isUsableVideo(v)) v = TC.pickVideo();
-    if (v !== TC.state.video) {
+    if (!v || !TC.isUsableVideo(v)) {
+      var picked = TC.pickVideo();
+      if (picked) v = picked;
+    }
+    if (v && v !== TC.state.video) {
       TC.state.video = v;
       if (TC.state.marked && !TC.state.marked.isConnected) TC.state.marked = null;
     }
 
-    if (active && TC.state.video && TC.state.crop.enabled) TC.applyCrop();
-    else TC.clearCrop();
+    // Only un-crop when cropping is genuinely meant to be off. If it is wanted
+    // but the video is momentarily unavailable, leave the last crop applied.
+    var wantCrop = active && TC.state.crop.enabled && TC.isCropValid(TC.state.crop);
+    if (!wantCrop) TC.clearCrop();
+    else if (TC.state.video) TC.applyCrop();
 
     if (active && TC.loop.enabled && TC.canLoopHere()) {
       if (!TC.loop.running && !TC.loop.done) TC.loop.startRuntime();

@@ -362,6 +362,18 @@
     var video = TC.state.video;
     var crop = TC.state.crop;
 
+    // Genuinely off: the user switched cropping off, or the rectangle is
+    // nonsense. Only this may un-crop.
+    if (!crop.enabled || !TC.isCropValid(crop)) {
+      TC.clearCrop();
+      return false;
+    }
+
+    // Everything below is a *transient* problem - the player is between videos,
+    // or briefly reports no size. None of these may remove the crop: doing so
+    // flashes the uncropped picture for a frame, once per reconcile tick.
+    if (!video) return false;
+
     if (TC.state.marked && TC.state.marked !== video) {
       try {
         TC.state.marked.removeAttribute(CROP_ATTR);
@@ -369,29 +381,12 @@
       TC.state.marked = null;
     }
 
-    if (!video || !crop.enabled || !TC.isCropValid(crop)) {
-      root.removeAttribute("data-tc-crop");
-      if (TC.state.marked) {
-        try {
-          TC.state.marked.removeAttribute(CROP_ATTR);
-        } catch (e) {}
-        TC.state.marked = null;
-      }
-      return false;
-    }
-
     var W = video.clientWidth || video.getBoundingClientRect().width;
     var H = video.clientHeight || video.getBoundingClientRect().height;
-    if (!W || !H) {
-      root.removeAttribute("data-tc-crop");
-      return false;
-    }
+    if (!W || !H) return false;
 
     var t = TC.computeTransform(crop, W, H, TC.contentBox(video, W, H), crop.mode);
-    if (!t) {
-      root.removeAttribute("data-tc-crop");
-      return false;
-    }
+    if (!t) return false;
 
     // Doing this on a timer means writing the same values over and over. Skip
     // it when nothing has changed: the repeated style writes are what makes the

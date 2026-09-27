@@ -218,6 +218,29 @@ const afterReapply = root.writes;
 TC.applyCrop();
 ok("then goes quiet again", root.writes === afterReapply);
 
+console.log("\ntransient problems must never un-crop (the once-a-second flash)");
+TC.state.video = makeVideo(1000, 1000, 1920, 1080);
+TC.state.crop = { enabled: true, x: 0.1, y: 0.1, w: 0.5, h: 0.5, mode: "fit" };
+TC.applyCrop();
+ok("applied", root.attrs["data-tc-crop"] === "on");
+
+TC.state.video = makeVideo(0, 0, 0, 0);
+TC.applyCrop();
+ok("a video that briefly reports no size keeps the crop", root.attrs["data-tc-crop"] === "on");
+
+TC.state.video = null;
+TC.applyCrop();
+ok("a momentarily missing video keeps the crop", root.attrs["data-tc-crop"] === "on");
+
+const video3 = makeVideo(1000, 1000, 1920, 1080);
+TC.state.video = video3;
+TC.applyCrop();
+ok("and it re-applies to the video that comes back", video3.getAttribute("data-tc-target") === "1");
+
+TC.state.crop.enabled = false;
+TC.applyCrop();
+ok("switching cropping off does un-crop", root.attrs["data-tc-crop"] === undefined);
+
 console.log("\nregressions found by the fuzzer");
 ok("NaN width is rejected, not propagated", Number.isFinite(TC.normalizeCrop({ w: NaN }).w));
 ok("Infinity is rejected", Number.isFinite(TC.normalizeCrop({ x: Infinity, y: -Infinity }).x));
