@@ -168,14 +168,13 @@
   /* --------------------------------------------------------- crop defaults */
 
   TC.defaultCrop = function () {
-    return { enabled: false, x: 0, y: 0, w: 1, h: 1, lockAspect: false, mode: "fit" };
+    return { enabled: false, x: 0, y: 0, w: 1, h: 1, mode: "fit" };
   };
 
   TC.normalizeCrop = function (raw) {
     var c = TC.defaultCrop();
     if (!raw || typeof raw !== "object") return c;
     c.enabled = !!raw.enabled;
-    c.lockAspect = !!raw.lockAspect;
     c.mode = raw.mode === "fill" ? "fill" : "fit";
     c.x = typeof raw.x === "number" ? TC.clamp(raw.x, 0, 1) : 0;
     c.y = typeof raw.y === "number" ? TC.clamp(raw.y, 0, 1) : 0;

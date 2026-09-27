@@ -101,7 +101,6 @@
     '      <label class="field">Width %<input type="number" id="w" min="0" max="100" step="0.5"></label>' +
     '      <label class="field">Height %<input type="number" id="h" min="0" max="100" step="0.5"></label>' +
     "    </div>" +
-    '    <label class="switch"><input type="checkbox" id="lock"><span class="track"></span><span>Keep the player\u2019s shape</span></label>' +
     '    <div class="row"><button class="chip" id="reset">Reset crop</button></div>' +
     '    <div class="hint" id="cropHint"></div>' +
     '    <div class="sep"></div>' +
@@ -286,7 +285,6 @@
       setValue(els.y, String(Math.round(c.y * 1000) / 10));
       setValue(els.w, String(Math.round(c.w * 1000) / 10));
       setValue(els.h, String(Math.round(c.h * 1000) / 10));
-      els.lock.checked = !!c.lockAspect;
       if (els.modeChips) {
         for (var i = 0; i < els.modeChips.length; i++) {
           els.modeChips[i].classList.toggle(
@@ -428,7 +426,6 @@
     els.y = shadow.getElementById("y");
     els.w = shadow.getElementById("w");
     els.h = shadow.getElementById("h");
-    els.lock = shadow.getElementById("lock");
     els.reset = shadow.getElementById("reset");
     els.cropHint = shadow.getElementById("cropHint");
     els.loopWrap = shadow.getElementById("loopWrap");
@@ -455,12 +452,6 @@
 
     els.select.addEventListener("click", function () {
       TC.select.begin();
-    });
-
-    els.lock.addEventListener("change", function () {
-      if (syncing) return;
-      TC.state.crop.lockAspect = els.lock.checked;
-      persistCrop();
     });
 
     els.reset.addEventListener("click", function () {
@@ -798,30 +789,17 @@
     sel.rafId = requestAnimationFrame(overlayLoop);
   }
 
-  function normalizedDrag(W, H) {
-    var x0 = Math.min(sel.sx, sel.cx);
-    var x1 = Math.max(sel.sx, sel.cx);
-    var y0 = Math.min(sel.sy, sel.cy);
-    var y1 = Math.max(sel.sy, sel.cy);
-
-    if (TC.state.crop.lockAspect && H > 0) {
-      var ratio = W / H;
-      var w = x1 - x0;
-      var h = y1 - y0;
-      if (h <= 0 || w / h > ratio) h = w / ratio;
-      else w = h * ratio;
-      if (x0 + w > W) x0 = Math.max(0, W - w);
-      if (y0 + h > H) y0 = Math.max(0, H - h);
-      x1 = Math.min(W, x0 + w);
-      y1 = Math.min(H, y0 + h);
-      x0 = Math.max(0, x1 - w);
-      y0 = Math.max(0, y1 - h);
-    }
-    return { x0: x0, y0: y0, x1: x1, y1: y1 };
+  function normalizedDrag() {
+    return {
+      x0: Math.min(sel.sx, sel.cx),
+      x1: Math.max(sel.sx, sel.cx),
+      y0: Math.min(sel.sy, sel.cy),
+      y1: Math.max(sel.sy, sel.cy)
+    };
   }
 
   function drawBox(W, H) {
-    var d = normalizedDrag(W, H);
+    var d = normalizedDrag();
     sel.box.style.left = d.x0 + "px";
     sel.box.style.top = d.y0 + "px";
     sel.box.style.width = Math.max(0, d.x1 - d.x0) + "px";
@@ -857,7 +835,7 @@
       sel.cancel();
       return;
     }
-    var d = normalizedDrag(W, H);
+    var d = normalizedDrag();
     var nw = (d.x1 - d.x0) / W;
     var nh = (d.y1 - d.y0) / H;
     if (nw < 0.02 || nh < 0.02) {

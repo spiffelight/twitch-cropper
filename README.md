@@ -60,8 +60,7 @@ like and click it (or press `Alt+Shift+P`) to open the panel.
      trimmed. The panel says "overhanging edges trimmed" when that applies.
 5. Fine-tune with the `X / Y / Width / Height` boxes, quick presets
    (Left / Right / Top / Bottom / Centre), or turn cropping off with the
-   *Cropping on* switch. **Keep the player's shape** locks the selection to the
-   player's aspect ratio, which makes Fit and Fill agree (no bars, no trim).
+   *Cropping on* switch.
 
 Settings save automatically for the current channel (or VOD/clip). *Clear* in the
 panel footer forgets them.
