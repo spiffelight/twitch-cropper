@@ -444,6 +444,15 @@
     return "https://player.twitch.tv/?" + params.join("&");
   };
 
+  // Where the popout should send its window back to.
+  TC.returnUrl = function () {
+    var info = TC.pageInfo();
+    if (info.kind === "vod" && info.videoId) return "https://www.twitch.tv/videos/" + info.videoId;
+    if (info.kind === "clip" && info.clip) return "https://www.twitch.tv/clip/" + info.clip;
+    if (info.channel) return "https://www.twitch.tv/" + info.channel;
+    return "https://www.twitch.tv/";
+  };
+
   // Window size whose aspect ratio matches the crop, fitted to the screen.
   TC.popoutSize = function () {
     var v = TC.state.video;

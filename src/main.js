@@ -27,10 +27,8 @@
   // to crop. Everywhere else cropping starts switched off.
   var forceCropOn = false;
 
-  // A fixed window name makes repeated clicks reuse the same popout window
-  // instead of piling up new ones. The size travels in the URL hash, so the new
-  // window knows what to do the instant it loads (no storage round-trip to lose).
-  var POPOUT_NAME = "twitch-cropper-popout";
+  // The size travels in the URL hash, so the popout knows what to do the
+  // instant it loads (no storage round-trip to lose).
   var POPOUT_HASH = /#tc=(\d+)x(\d+)/;
 
   /* ------------------------------------------------------------- page keys */
@@ -115,39 +113,33 @@
 
   /* ----------------------------------------------------------- popout mode */
 
-  // Open the cropped, player-only view in its own window, sized to the crop.
-  // A real window is the only thing that can hide the browser chrome *and* be
-  // resized to the crop; a normal tab can do neither.
+  // Move THIS tab into a chrome-less popup window and load the cropped,
+  // player-only view in it. This goes through the background because only an
+  // extension can create a window without browser chrome.
   TC.enterPopout = function () {
     var base = TC.popoutUrl();
     if (!base) return false;
     var size = TC.popoutSize();
     var url = base + "#tc=" + size.width + "x" + size.height;
-    var features =
-      "width=" + size.width + ",height=" + size.height +
-      ",toolbar=no,menubar=no,personalbar=no,scrollbars=no,location=no,status=no,resizable=yes";
-    var win = null;
     try {
-      win = window.open(url, POPOUT_NAME, features);
-    } catch (e) {}
-    if (!win) return "blocked";
-    try {
-      win.focus();
-    } catch (e) {}
+      browser.runtime.sendMessage({
+        type: "tc-popout",
+        url: url,
+        width: size.width,
+        height: size.height
+      });
+    } catch (e) {
+      return false;
+    }
     return true;
   };
 
-  // Leave the popout: close the window, or fall back to navigating if the
-  // browser will not let us close it.
+  // Hand the tab back: the background moves it to a normal window if there is
+  // one, restores the normal Twitch page and drops the popup window.
   TC.returnFromPopout = function () {
     try {
-      window.close();
+      browser.runtime.sendMessage({ type: "tc-return", url: TC.returnUrl() });
     } catch (e) {}
-    setTimeout(function () {
-      try {
-        location.href = "https://www.twitch.tv/";
-      } catch (e) {}
-    }, 250);
   };
 
   /* ------------------------------------------------------------- reconcile */
@@ -270,12 +262,16 @@
         try {
           history.replaceState(null, "", location.pathname + location.search);
         } catch (e) {}
-        // window.open's width/height include browser chrome, so correct for it
-        // and make the *content* match the crop exactly.
+        // Ask the background to size the window so its *content* matches the
+        // crop exactly (the window's own chrome is measured here).
         try {
           var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
           var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
-          window.resizeTo(parseInt(m[1], 10) + chromeW, parseInt(m[2], 10) + chromeH);
+          browser.runtime.sendMessage({
+            type: "tc-resize",
+            width: parseInt(m[1], 10) + chromeW,
+            height: parseInt(m[2], 10) + chromeH
+          });
         } catch (e) {}
         TC.ui.showReturnBar();
         setActive(true);

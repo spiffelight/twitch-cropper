@@ -109,20 +109,20 @@ chat ever comes back empty, press **Load chat** and, if needed, reload the page.
 
 **Popping out a crop-shaped window**
 
-**Crop → Pop out cropped window** opens Twitch's player-only view in its own
-window — no chat, no site chrome — sized to the shape of your crop, so the stream
-fills it with no letterbox bars. It is Twitch's own popout, so playback, quality
-and ads behave normally; only the window size is ours.
+**Crop → Pop out cropped window** moves *the tab you are on* into a small
+chrome-less window showing only the cropped player, sized to the shape of your
+crop so the stream fills it with no letterbox bars. Nothing is left behind: the
+tab **moves** rather than a second window appearing, so if it was the only tab,
+the old window closes by itself.
 
-Clicking again **reuses that same window** instead of opening more of them. A
-small **✕ Close** button sits in the top-right; closing it leaves your normal
-Twitch window untouched. If nothing opens, allow pop-ups for `twitch.tv`.
+The window is created through the extension APIs (`windows.create` with
+`type: "popup"`), which is the only way to get a window with **no address bar** —
+a web page is not allowed to hide it. It is Twitch's own player-only view, so
+playback, quality and ads behave normally.
 
-Firefox does not let a page hide the **address bar** — that is the
-`dom.disable_window_open_feature.location` policy — so the popout keeps a URL bar
-whatever it asks for. The navigation toolbar, menu bar and bookmarks bar *are*
-hidden. A page also cannot close a window it did not open, so the original Twitch
-window stays put.
+The **✕ Close** button in the top-right moves the tab back into a normal window
+(when you have one open) and restores the ordinary Twitch page, so you end up
+exactly where you started.
 
 **Reset**
 
