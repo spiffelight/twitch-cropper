@@ -4,6 +4,10 @@ A Firefox extension that crops a Twitch stream or VOD down to just the part of
 the picture you care about — drawn with a simple drag — and can loop a segment
 of a VOD or clip.
 
+<img src="Images/Crop.png" alt="The Twitch player showing only the selected region of the picture" width="820">
+
+Submitted to addons.mozilla.org; this repository is its source.
+
 - **Off until you switch it on.** A Twitch page loads completely untouched —
   nothing applied, no extra UI. The toolbar button (or `Alt+Shift+C`) turns it on.
 - **Numbers are remembered; switches are not.** Each channel keeps its crop
@@ -192,6 +196,33 @@ control the rest of the code looks up by id still exists.
 `LISTING.md` and `REVIEWERS.md` are paste-ready text for the AMO submission
 fields. `web-ext-config.cjs` keeps `test/`, this README and those two files out of
 the packaged XPI.
+
+## Privacy
+
+Twitch Cropper collects and sends nothing. It contains no networking code at
+all — no `fetch`, no `XMLHttpRequest`, no `WebSocket` — and no analytics, no
+accounts and no server of ours. The crop you choose for a channel and the loop
+times you choose for a video are stored locally by Firefox and never leave your
+computer; the panel's **Reset** button clears them.
+
+The manifest declares this as `data_collection_permissions.required: ["none"]`.
+
+## Screenshots
+
+| | |
+|---|---|
+| <img src="Images/NoCrop.png" width="390"> | <img src="Images/Crop.png" width="390"> |
+| the ordinary 16:9 view | cropped to the webcam |
+| <img src="Images/CropPop-1280x800.png" width="390"> | <img src="Images/Menu-1280x800.png" width="390"> |
+| popped out into its own window | the panel |
+
+Screenshots are from the channel **Tobs** — thanks, Tobs!
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+Not affiliated with Twitch Interactive, Inc.
 
 ## Files
 
