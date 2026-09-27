@@ -1,9 +1,14 @@
 /*
  * Twitch Cropper - bootstrap.
  *
- * Watches the page (Twitch is a single-page app), decides which stored crop /
- * loop applies, keeps the crop transform in sync with the player's size, and
- * reacts to the toolbar button and keyboard shortcuts.
+ * The extension starts switched OFF on every page load: a Twitch page looks
+ * completely untouched, with nothing applied and no UI, until the user turns it
+ * on. Saved settings (per channel / per video) are remembered, just not applied
+ * until then.
+ *
+ * Also watches the page (Twitch is a single-page app), keeps the crop transform
+ * in sync with the player size, drives the popout window, and reacts to the
+ * toolbar button and keyboard shortcuts.
  */
 
 (function () {
@@ -16,6 +21,12 @@
   var lastHref = location.href;
   var scopeToken = 0;
   var reconcileQueued = false;
+  var active = false;
+
+  var POP_KEY = "tc.popout";
+  var RETURN_HASH = "#tc-active";
+
+  /* ------------------------------------------------------------- page keys */
 
   function cropKey() {
     var info = TC.pageInfo();
@@ -33,6 +44,8 @@
     if (info.kind === "clip" && info.clip) return "loop:k:" + info.clip;
     return null;
   }
+
+  /* ---------------------------------------------------------------- scopes */
 
   function applyScope() {
     var info = TC.pageInfo();
@@ -63,6 +76,75 @@
     }).catch(function () {});
   }
 
+  /* ------------------------------------------------------------ activation */
+
+  // Turn the whole extension on or off. Off is the default on every load.
+  function setActive(next) {
+    active = !!next;
+    TC.state.active = active;
+
+    if (active) {
+      TC.applyCrop();
+      if (TC.loop.enabled && TC.canLoopHere() && !TC.loop.done) TC.loop.startRuntime();
+      TC.chat.reconcile();
+    } else {
+      TC.clearCrop();
+      TC.loop.stopRuntime();
+      TC.chat.suspend();
+    }
+
+    TC.ui.setActive(active);
+    TC.ui.syncInputs();
+  }
+
+  TC.setActive = setActive;
+  TC.isActive = function () {
+    return active;
+  };
+
+  /* ----------------------------------------------------------- popout mode */
+
+  function savePopoutRequest() {
+    var size = TC.popoutSize();
+    TC.setStored(POP_KEY, {
+      url: location.href,
+      path: location.pathname + location.search,
+      w: size.width,
+      h: size.height,
+      ts: Date.now()
+    });
+  }
+
+  function clearPopoutRequest() {
+    TC.removeStored(POP_KEY);
+  }
+
+  // Turn *this* window into the cropped, player-only view.
+  TC.enterPopout = function () {
+    var url = TC.popoutUrl();
+    if (!url) return false;
+    savePopoutRequest();
+    location.href = url;
+    return true;
+  };
+
+  // Take this window back to the normal Twitch page, switched on again.
+  TC.returnFromPopout = function (url) {
+    clearPopoutRequest();
+    var target = url || "https://www.twitch.tv/";
+    location.href = target + (target.indexOf("#") === -1 ? RETURN_HASH : "");
+  };
+
+  function consumeReturnHash() {
+    if (location.hash !== RETURN_HASH) return false;
+    try {
+      history.replaceState(null, "", location.pathname + location.search);
+    } catch (e) {}
+    return true;
+  }
+
+  /* ------------------------------------------------------------- reconcile */
+
   function reconcile() {
     var v = TC.pickVideo();
     if (v !== TC.state.video) {
@@ -70,10 +152,10 @@
       if (TC.state.marked && !TC.state.marked.isConnected) TC.state.marked = null;
     }
 
-    if (TC.state.video && TC.state.crop.enabled) TC.applyCrop();
+    if (active && TC.state.video && TC.state.crop.enabled) TC.applyCrop();
     else TC.clearCrop();
 
-    if (TC.loop.enabled && TC.canLoopHere()) {
+    if (active && TC.loop.enabled && TC.canLoopHere()) {
       if (!TC.loop.running && !TC.loop.done) TC.loop.startRuntime();
     } else if (TC.loop.running) {
       TC.loop.stopRuntime();
@@ -94,11 +176,12 @@
     TC.ui.updateCropHint();
   }
 
+  /* ---------------------------------------------------------------- boot */
+
   function start() {
     applyScope();
     reconcile();
 
-    // Media element lifecycle.
     ["loadedmetadata", "durationchange", "emptied", "loadstart", "resize"].forEach(function (evt) {
       document.addEventListener(evt, onVideoEvent, true);
     });
@@ -126,14 +209,13 @@
       } catch (e) {}
     }
 
-    // Twitch navigates without reloading, so watch the URL and the DOM.
     setInterval(function () {
       if (location.href !== lastHref) {
         lastHref = location.href;
         TC.state.scopeId = null;
         applyScope();
       }
-      TC.chat.reconcile();
+      if (active) TC.chat.reconcile();
       queueReconcile();
     }, 800);
 
@@ -153,24 +235,51 @@
     try {
       browser.runtime.onMessage.addListener(function (msg) {
         if (!msg || !msg.type) return;
-        if (msg.type === "tc-toggle-panel") {
-          TC.ui.togglePanel();
+        if (msg.type === "tc-toggle-active") {
+          if (active) setActive(false);
+          else { setActive(true); TC.ui.openPanel(); }
+        } else if (msg.type === "tc-toggle-panel") {
+          if (!active) { setActive(true); TC.ui.openPanel(); }
+          else TC.ui.togglePanel();
         } else if (msg.type === "tc-toggle-crop") {
-          TC.state.crop.enabled = !TC.state.crop.enabled;
-          TC.applyCrop();
-          TC.ui.syncInputs();
-          TC.ui.persistCrop();
+          if (!active) setActive(true);
+          else {
+            TC.state.crop.enabled = !TC.state.crop.enabled;
+            TC.applyCrop();
+            TC.ui.syncInputs();
+            TC.ui.persistCrop();
+          }
         }
       });
     } catch (e) {}
   }
 
   function init() {
-    // The player-only popout is a viewing window: apply the crop, but keep it clean.
+    var returning = consumeReturnHash();
+
+    // The player-only popout: apply the crop, offer a way back, no panel.
     if (TC.isPopout) {
       start();
+      TC.getStored(POP_KEY, null)
+        .then(function (req) {
+          setActive(true);
+          var fresh = req && req.ts && Date.now() - req.ts < 3600000;
+          if (fresh) {
+            try {
+              window.resizeTo(req.w, req.h);
+            } catch (e) {}
+            TC.ui.showReturnBar(req.url);
+          } else {
+            TC.ui.showReturnBar(null);
+          }
+        })
+        .catch(function () {
+          setActive(true);
+          TC.ui.showReturnBar(null);
+        });
       return;
     }
+
     TC.getStored("tc.ui", null)
       .then(function (stored) {
         TC.ui.init(stored || null);
@@ -181,7 +290,11 @@
       .then(function () {
         return TC.chat.init();
       })
-      .then(start);
+      .then(function () {
+        // Coming back from the popout: carry on where we left off.
+        if (returning) setActive(true);
+        start();
+      });
   }
 
   if (document.readyState === "loading") {

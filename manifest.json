@@ -46,7 +46,7 @@
     },
     "toggle-crop": {
       "suggested_key": { "default": "Alt+Shift+C" },
-      "description": "Turn cropping on or off"
+      "description": "Turn Twitch Cropper on or off"
     }
   },
   "icons": {

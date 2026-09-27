@@ -25,10 +25,10 @@ async function sendToActiveTab(type) {
 
 browser.action.onClicked.addListener((tab) => {
   if (!isTwitchTab(tab)) return;
-  browser.tabs.sendMessage(tab.id, { type: "tc-toggle-panel" }).catch(() => {});
+  browser.tabs.sendMessage(tab.id, { type: "tc-toggle-active" }).catch(() => {});
 });
 
 browser.commands.onCommand.addListener((command) => {
-  if (command === "toggle-crop") sendToActiveTab("tc-toggle-crop");
+  if (command === "toggle-crop") sendToActiveTab("tc-toggle-active");
   else if (command === "toggle-panel") sendToActiveTab("tc-toggle-panel");
 });

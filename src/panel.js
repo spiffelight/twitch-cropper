@@ -70,7 +70,9 @@
     ".fab{width:40px;height:40px;border-radius:50%;background:#18181b;border:1px solid #3a3a3d;",
     "box-shadow:0 6px 18px rgba(0,0,0,.5);display:grid;place-items:center;cursor:pointer;font-size:17px;user-select:none;touch-action:none}",
     ".fab:hover{border-color:#9147ff}",
-    ".fab.active{border-color:#9147ff;background:#1f1230}"
+    ".fab.active{border-color:#9147ff;background:#1f1230}",
+    ".returnbar{cursor:pointer;background:rgba(24,24,27,.9);color:#efeff1;border:1px solid #3a3a3d;border-radius:8px;padding:6px 10px;font:12px -apple-system,'Segoe UI',Roboto,sans-serif;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}",
+    ".returnbar:hover{border-color:#9147ff}"
   ].join("");
 
   var PANEL_HTML =
@@ -130,7 +132,7 @@
     '    <button class="btn" id="chatToggle">Unload chat</button>' +
     '    <div class="hint" id="chatHint"></div>' +
     "  </div>" +
-    '  <div class="foot"><span id="scope">Not saved yet</span><button class="link" id="clear">Clear</button></div>' +
+    '  <div class="foot"><span id="scope">Not saved yet</span><button class="link" id="off">Turn off</button><button class="link" id="resetAll">Reset</button></div>' +
     "</div>";
 
   var FAB_HTML =
@@ -450,7 +452,8 @@
     els.chatToggle = shadow.getElementById("chatToggle");
     els.chatHint = shadow.getElementById("chatHint");
     els.scope = shadow.getElementById("scope");
-    els.clear = shadow.getElementById("clear");
+    els.off = shadow.getElementById("off");
+    els.resetAll = shadow.getElementById("resetAll");
 
     els.enabled.addEventListener("change", function () {
       if (syncing) return;
@@ -465,20 +468,7 @@
     });
 
     els.popout.addEventListener("click", function () {
-      var url = TC.popoutUrl();
-      if (!url) {
-        toast("Open a channel or VOD first.");
-        return;
-      }
-      var size = TC.popoutSize();
-      var features =
-        "width=" + size.width + ",height=" + size.height +
-        ",toolbar=no,menubar=no,scrollbars=no,location=no,status=no";
-      var win = null;
-      try {
-        win = window.open(url, "_blank", features);
-      } catch (e) {}
-      if (!win) toast("Pop-up blocked \u2014 allow pop-ups for twitch.tv, then try again.");
+      if (!TC.enterPopout()) toast("Open a channel or VOD first.");
     });
 
     els.reset.addEventListener("click", function () {
@@ -602,17 +592,24 @@
       ui.closePanel();
     });
 
-    els.clear.addEventListener("click", function () {
-      // Cancel anything still queued, or it would re-save after the removal.
-      cancelPersist(TC.state.cropKey);
-      cancelPersist(TC.state.loopKey);
-      if (TC.state.cropKey) TC.removeStored(TC.state.cropKey);
-      if (TC.state.loopKey) TC.removeStored(TC.state.loopKey);
-      TC.state.crop = TC.defaultCrop();
-      TC.loop.reset();
-      TC.clearCrop();
-      syncInputs();
-      els.scope.textContent = "Cleared for this page";
+    els.off.addEventListener("click", function () {
+      TC.setActive(false);
+      toast("Twitch Cropper is off.");
+    });
+
+    var resetArmed = 0;
+    els.resetAll.addEventListener("click", function () {
+      if (Date.now() - resetArmed > 4000) {
+        resetArmed = Date.now();
+        els.resetAll.textContent = "Sure?";
+        setTimeout(function () {
+          els.resetAll.textContent = "Reset";
+        }, 4000);
+        return;
+      }
+      resetArmed = 0;
+      els.resetAll.textContent = "Reset";
+      doResetAll();
     });
 
     els.chatToggle.addEventListener("click", function () {
@@ -703,8 +700,12 @@
     place(fabHost, uiSettings.fabPos, defaultFabPos());
     place(panelHost, uiSettings.panelPos, defaultPanelPos());
     els.panel.classList.toggle("collapsed", uiSettings.collapsed);
-    panelHost.style.display = uiSettings.open ? "" : "none";
-    fabEls.fab.classList.toggle("active", uiSettings.open);
+    // Never open by itself, and hide the launcher until the extension is on, so
+    // a freshly loaded Twitch page looks completely untouched.
+    uiSettings.open = false;
+    panelHost.style.display = "none";
+    fabEls.fab.classList.remove("active");
+    fabHost.style.display = "none";
     syncInputs();
 
     window.addEventListener("resize", function () {
@@ -715,6 +716,54 @@
       mountHost(fabHost);
       mountHost(panelHost);
     });
+  };
+
+  function doResetAll() {
+    cancelPersist(TC.state.cropKey);
+    cancelPersist(TC.state.loopKey);
+    TC.setActive(false);
+    TC.chat.load();
+    TC.loop.reset();
+    TC.state.crop = TC.defaultCrop();
+    TC.state.scopeId = null;
+    TC.state.cropKey = null;
+    TC.state.loopKey = null;
+    TC.clearCrop();
+    syncInputs();
+    els.scope.textContent = "Not saved yet";
+    TC.clearAllStored().then(function () {
+      TC.ui.setScope(null, null);
+      toast("Everything reset.");
+    });
+  }
+
+  ui.setActive = function (on) {
+    if (fabHost) fabHost.style.display = on ? "" : "none";
+    if (!on) ui.closePanel();
+  };
+
+  // Shown only in the player-only popout window, so there is always a way back.
+  var returnHost = null;
+  ui.showReturnBar = function (url) {
+    if (returnHost) return;
+    var made = makeHost("twitch-cropper-return");
+    returnHost = made.host;
+    var shadow = made.shadow;
+    var style = document.createElement("style");
+    style.textContent = PANEL_CSS;
+    shadow.appendChild(style);
+    var btn = document.createElement("div");
+    btn.className = "returnbar";
+    btn.textContent = "\u21a9 Normal view";
+    btn.title = "Take this window back to the normal Twitch page";
+    btn.addEventListener("click", function () {
+      TC.returnFromPopout(url);
+    });
+    shadow.appendChild(btn);
+    mountHost(returnHost);
+    returnHost.style.left = "auto";
+    returnHost.style.right = "10px";
+    returnHost.style.top = "10px";
   };
 
   ui.openPanel = function () {

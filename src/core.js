@@ -98,6 +98,12 @@
     return browser.storage.local.remove(key).catch(function () {});
   };
 
+  // Wipe every setting this extension has ever stored.
+  TC.clearAllStored = function () {
+    if (!hasStorage) return Promise.resolve();
+    return browser.storage.local.clear().catch(function () {});
+  };
+
   /* -------------------------------------------------------------- page info */
 
   var RESERVED = {
@@ -215,6 +221,7 @@
   /* -------------------------------------------------------- video discovery */
 
   TC.state = {
+    active: false,
     crop: TC.defaultCrop(),
     loop: null,
     video: null,

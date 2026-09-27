@@ -97,8 +97,19 @@
      * on. Throttled so we never fight Twitch in a tight loop if it decides to
      * re-render the column underneath us.
      */
+    // Put the chat back without changing the saved preference. Used when the
+    // whole extension is switched off, so Twitch looks normal again.
+    suspend: function () {
+      if (saved && saved.node && !saved.node.isConnected && saved.parent && saved.parent.isConnected) {
+        saved.parent.insertBefore(saved.node, saved.next);
+      }
+      saved = null;
+      lastAttempt = 0;
+    },
+
     reconcile: function () {
       if (!pref) return;
+      if (TC.isActive && !TC.isActive()) return;
       var node = findChat();
       if (!node) return;
       if (saved && saved.node === node) return;

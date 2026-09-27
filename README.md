@@ -4,6 +4,9 @@ A Firefox extension that crops a Twitch stream or VOD down to just the part of
 the picture you care about — drawn with a simple drag — and can loop a segment
 of a VOD or clip.
 
+- **Off until you switch it on.** A Twitch page loads completely untouched —
+  nothing applied, no extra UI. The toolbar button (or `Alt+Shift+C`) turns it on;
+  your settings are remembered, just not applied until then.
 - **Crop by dragging.** Click *Select region*, drag a box over the player, done.
   By default the player is re-shaped to the crop so you see **all** of it; switch
   to *Fill player* if you'd rather the crop fill the player and trim the overhang.
@@ -19,10 +22,11 @@ of a VOD or clip.
   times).
 - **Unload chat** to take the whole chat column out of the page. Twitch's own
   hide button only *hides* it, leaving it mounted and running.
-- **Pop out a crop-shaped window** — Twitch's own player-only popout, opened at
-  the size of your crop, so the little window *is* the shape you selected.
+- **A crop-shaped window** — turns *the current window* into Twitch's
+  player-only view at the shape of your crop, with one button to get back.
+- **Reset everything** with one button in the panel footer.
 - **Keyboard shortcuts:** `Alt+Shift+P` shows/hides the panel, `Alt+Shift+C`
-  turns cropping on/off. Both are re-bindable in `about:addons` → gear →
+  turns the whole extension on/off. Both are re-bindable in `about:addons` → gear →
   *Manage Extension Shortcuts*.
 - No network access, no analytics, nothing leaves your browser except the
   settings stored locally by Firefox.
@@ -47,8 +51,13 @@ web-ext build        # produces a .zip you can sign on addons.mozilla.org
 
 ## Using it
 
-A small scissors button appears at the bottom-right of Twitch. Drag it where you
-like and click it (or press `Alt+Shift+P`) to open the panel.
+Twitch Cropper is **off by default**: while it is off, a Twitch page is
+completely normal, with nothing applied and nothing added to it. Turn it on with
+the **toolbar button** (or `Alt+Shift+C`); the panel opens and a small ✂ button
+appears bottom-right. Turning it off again removes everything immediately.
+
+Settings are remembered per channel and per video, so once it is switched on your
+crop and loop come back.
 
 **Cropping**
 
@@ -96,17 +105,24 @@ It cannot close Twitch's connection to chat — only Twitch can unmount its own
 component — so treat this as a rendering/CPU saving, not a full teardown. If the
 chat ever comes back empty, press **Load chat** and, if needed, reload the page.
 
-**Popping out a crop-shaped window**
+**Cropping the current window**
 
-**Crop → Pop out cropped window** opens Twitch's player-only popout — no chat, no
-site chrome — in a window sized to match your crop, so the stream fills it
-exactly with no letterbox bars. It is Twitch's own popout, so playback, quality
-and ads behave normally; only the window size is ours.
+**Crop → Pop out cropped window** turns *this* window into Twitch's player-only
+view — no chat, no site chrome — and asks it to resize to the shape of your crop,
+so the stream fills it with no letterbox bars. It is Twitch's own popout, so
+playback, quality and ads behave normally; only the window size is ours.
 
-The window loads the same per-channel crop as the main tab, so it is already
-cropped when it appears. The extension deliberately shows no panel or button in
-that window — it is just the video. If nothing opens, allow pop-ups for
-`twitch.tv` and try again.
+A **↩ Normal view** button sits in the top-right to take the window back to the
+normal Twitch page, switched on again. Browsers often refuse to resize a window
+they did not open, so if the window does not change shape, drag it to size by
+hand — the crop is a "fit", so it fills whatever shape the window is.
+
+**Reset**
+
+The **Reset** button in the panel footer wipes everything the extension has
+stored — every channel's crop, every video's loop, the chat preference and the
+window positions — switches it off and puts the page back to normal. It asks
+*Sure?* first; click again within a few seconds to confirm.
 
 ## How the crop actually works
 
