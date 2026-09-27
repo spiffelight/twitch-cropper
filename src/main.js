@@ -166,6 +166,11 @@
   }
 
   function init() {
+    // The player-only popout is a viewing window: apply the crop, but keep it clean.
+    if (TC.isPopout) {
+      start();
+      return;
+    }
     TC.getStored("tc.ui", null)
       .then(function (stored) {
         TC.ui.init(stored || null);

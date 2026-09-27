@@ -19,6 +19,8 @@ of a VOD or clip.
   times).
 - **Unload chat** to take the whole chat column out of the page. Twitch's own
   hide button only *hides* it, leaving it mounted and running.
+- **Pop out a crop-shaped window** — Twitch's own player-only popout, opened at
+  the size of your crop, so the little window *is* the shape you selected.
 - **Keyboard shortcuts:** `Alt+Shift+P` shows/hides the panel, `Alt+Shift+C`
   turns cropping on/off. Both are re-bindable in `about:addons` → gear →
   *Manage Extension Shortcuts*.
@@ -93,6 +95,18 @@ other Twitch pages.
 It cannot close Twitch's connection to chat — only Twitch can unmount its own
 component — so treat this as a rendering/CPU saving, not a full teardown. If the
 chat ever comes back empty, press **Load chat** and, if needed, reload the page.
+
+**Popping out a crop-shaped window**
+
+**Crop → Pop out cropped window** opens Twitch's player-only popout — no chat, no
+site chrome — in a window sized to match your crop, so the stream fills it
+exactly with no letterbox bars. It is Twitch's own popout, so playback, quality
+and ads behave normally; only the window size is ours.
+
+The window loads the same per-channel crop as the main tab, so it is already
+cropped when it appears. The extension deliberately shows no panel or button in
+that window — it is just the video. If nothing opens, allow pop-ups for
+`twitch.tv` and try again.
 
 ## How the crop actually works
 

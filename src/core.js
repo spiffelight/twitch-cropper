@@ -107,6 +107,9 @@
     store: 1, creatorcamp: 1, prime: 1
   };
 
+  // True on Twitch's player-only popout host, where our content script also runs.
+  TC.isPopout = location.hostname === "player.twitch.tv";
+
   TC.pageInfo = function () {
     var info = { channel: null, videoId: null, clip: null, kind: "other" };
     var segs = location.pathname.split("/").filter(Boolean);
@@ -114,6 +117,19 @@
     if (location.hostname === "clips.twitch.tv") {
       info.kind = "clip";
       info.clip = segs[0] || null;
+      return info;
+    }
+    if (TC.isPopout) {
+      var query = new URLSearchParams(location.search);
+      var popChannel = query.get("channel");
+      var popVideo = query.get("video");
+      if (popChannel) info.channel = popChannel.toLowerCase();
+      if (popVideo) {
+        info.kind = "vod";
+        info.videoId = popVideo;
+      } else if (popChannel) {
+        info.kind = "channel";
+      }
       return info;
     }
     if (!segs.length) return info;
@@ -395,6 +411,54 @@
       top: r.top + cb.y,
       width: cb.w,
       height: cb.h
+    };
+  };
+
+  /* ------------------------------------------------------------- popout */
+
+  // Twitch's own player-only popout, stripped of chat and site chrome. Opened
+  // at a size we choose so the window matches the shape of the crop.
+  TC.popoutUrl = function () {
+    var info = TC.pageInfo();
+    var params = [];
+    if (info.kind === "vod" && info.videoId) {
+      params.push("video=" + encodeURIComponent(info.videoId));
+    } else if (info.channel) {
+      params.push("channel=" + encodeURIComponent(info.channel));
+    } else {
+      return null;
+    }
+    params.push("enableExtensions=true");
+    params.push("muted=false");
+    params.push("parent=twitch.tv");
+    params.push("player=popout");
+    params.push("quality=auto");
+    params.push("volume=0.5");
+    return "https://player.twitch.tv/?" + params.join("&");
+  };
+
+  // Window size whose aspect ratio matches the crop, fitted to the screen.
+  TC.popoutSize = function () {
+    var v = TC.state.video;
+    var crop = TC.state.crop;
+    var VW = v && v.videoWidth ? v.videoWidth : 16;
+    var VH = v && v.videoHeight ? v.videoHeight : 9;
+    var aspect = (crop.w * VW) / (crop.h * VH);
+    if (!isFinite(aspect) || aspect <= 0) aspect = VW / VH;
+    var availW = (typeof screen !== "undefined" && screen.availWidth) || 1280;
+    var availH = (typeof screen !== "undefined" && screen.availHeight) || 720;
+    var maxW = Math.round(availW * 0.9);
+    var maxH = Math.round(availH * 0.9);
+    var w = maxW;
+    var h = Math.round(w / aspect);
+    if (h > maxH) {
+      h = maxH;
+      w = Math.round(h * aspect);
+    }
+    return {
+      width: Math.min(2400, Math.max(240, w)),
+      height: Math.min(2400, Math.max(160, h)),
+      aspect: aspect
     };
   };
 })();

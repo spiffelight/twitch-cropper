@@ -103,6 +103,7 @@
     '      <label class="field">Height %<input type="number" id="h" min="0" max="100" step="0.5"></label>' +
     "    </div>" +
     '    <div class="row"><button class="chip" id="reset">Reset crop</button></div>' +
+    '    <div class="row"><button class="chip" id="popout">Pop out cropped window</button></div>' +
     '    <div class="hint" id="cropHint"></div>' +
     '    <div class="sep"></div>' +
     '    <div class="sec">Loop (VODs &amp; clips)</div>' +
@@ -433,6 +434,7 @@
     els.w = shadow.getElementById("w");
     els.h = shadow.getElementById("h");
     els.reset = shadow.getElementById("reset");
+    els.popout = shadow.getElementById("popout");
     els.cropHint = shadow.getElementById("cropHint");
     els.loopWrap = shadow.getElementById("loopWrap");
     els.loopEnabled = shadow.getElementById("loopEnabled");
@@ -460,6 +462,23 @@
 
     els.select.addEventListener("click", function () {
       TC.select.begin();
+    });
+
+    els.popout.addEventListener("click", function () {
+      var url = TC.popoutUrl();
+      if (!url) {
+        toast("Open a channel or VOD first.");
+        return;
+      }
+      var size = TC.popoutSize();
+      var features =
+        "width=" + size.width + ",height=" + size.height +
+        ",toolbar=no,menubar=no,scrollbars=no,location=no,status=no";
+      var win = null;
+      try {
+        win = window.open(url, "_blank", features);
+      } catch (e) {}
+      if (!win) toast("Pop-up blocked \u2014 allow pop-ups for twitch.tv, then try again.");
     });
 
     els.reset.addEventListener("click", function () {
@@ -617,8 +636,8 @@
     } else {
       els.chatToggle.classList.remove("disabled");
       els.chatHint.textContent = unloaded
-        ? "Chat is detached from the page."
-        : "Removes the chat column from the page.";
+        ? "Make chat visible."
+        : "Unload to save CPU/mem.";
     }
   }
 
