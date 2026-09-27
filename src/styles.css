@@ -1,0 +1,38 @@
+/*
+ * Twitch Cropper - page styles.
+ *
+ * We only ever touch the real <video> element with a transform. Twitch's own
+ * `.video-player__container` wrapper is exactly the size of the video and
+ * already has `overflow: hidden`, so it clips the enlarged video for us.
+ * Everything else (panel, selection overlay) lives in isolated Shadow DOM,
+ * so Twitch's CSS can never break our UI and our UI can never break Twitch.
+ */
+
+html[data-tc-crop="on"] video[data-tc-target="1"] {
+  transform-origin: var(--tc-ox, 50%) var(--tc-oy, 50%) !important;
+  transform: translate(var(--tc-tx, 0px), var(--tc-ty, 0px))
+    scale(var(--tc-s, 1)) !important;
+  /* clip-path is resolved before the transform, so these insets describe the
+     crop rectangle in the video's own coordinates; the transform then moves
+     and scales it into place. */
+  clip-path: inset(
+      var(--tc-ct, 0px) var(--tc-cr, 0px) var(--tc-cb, 0px) var(--tc-cl, 0px)
+    ) !important;
+  will-change: transform !important;
+}
+
+/* Anything the crop no longer covers shows the player's background: keep it black. */
+html[data-tc-crop="on"] .video-player__container,
+html[data-tc-crop="on"] [data-a-target="video-ref"] {
+  background-color: #000 !important;
+}
+
+/*
+ * Belt and braces. Today the video's containing block (`.video-player__container`)
+ * already has `overflow: hidden`, which is what actually clips the enlarged
+ * video. If Twitch ever makes `.video-ref` the containing block instead, this
+ * keeps it clipped too. On a static `.video-ref` the rule is inert.
+ */
+html[data-tc-crop="on"] [data-a-target="video-ref"] {
+  overflow: hidden !important;
+}

@@ -1,0 +1,133 @@
+# Twitch Cropper
+
+A Firefox extension that crops a Twitch stream or VOD down to just the part of
+the picture you care about — drawn with a simple drag — and can loop a segment
+of a VOD or clip.
+
+- **Crop by dragging.** Click *Select region*, drag a box over the player, done.
+  By default the player is re-shaped to the crop so you see **all** of it; switch
+  to *Fill player* if you'd rather the crop fill the player and trim the overhang.
+- **Native quality.** The crop is done with a CSS transform on the real
+  `<video>` element. No re-encoding, no downscaling, no canvas — you see exactly
+  the pixels Twitch sends.
+- **Works on live streams, VODs and clips**, in normal, theatre and full-screen
+  modes.
+- **Remembers per channel** (VODs/clips fall back to per-video), so a streamer's
+  crop comes back automatically next time.
+- **Loop a segment** on VODs and clips: set a start and stop time and it jumps
+  back to the start each time it reaches the stop (optionally a fixed number of
+  times).
+- **Keyboard shortcuts:** `Alt+Shift+P` shows/hides the panel, `Alt+Shift+C`
+  turns cropping on/off. Both are re-bindable in `about:addons` → gear →
+  *Manage Extension Shortcuts*.
+- No network access, no analytics, nothing leaves your browser except the
+  settings stored locally by Firefox.
+
+## Install (development)
+
+Firefox 115 or newer.
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on…**.
+3. Pick `manifest.json` in this folder.
+
+Temporary add-ons disappear when Firefox restarts. To load it permanently you
+need to package and sign it (see below), or use `web-ext`.
+
+With [web-ext](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/):
+
+```sh
+web-ext run          # launches Firefox with the extension loaded
+web-ext build        # produces a .zip you can sign on addons.mozilla.org
+```
+
+## Using it
+
+A small scissors button appears at the bottom-right of Twitch. Drag it where you
+like and click it (or press `Alt+Shift+P`) to open the panel.
+
+**Cropping**
+
+1. Click **Select region…**
+2. Drag the rectangle you want to keep. The rest is dimmed while you drag.
+   Press `Esc` to cancel.
+3. That's it — the region now fills the player.
+4. Choose the fit behaviour:
+   - **Fit crop** (default) — the whole crop is shown and the player takes the
+     crop's shape, with black bars where it doesn't reach. A portrait webcam
+     crop gives you a tall player; nothing is cut off.
+   - **Fill player** — the crop fills the player and any overhanging edges are
+     trimmed. The panel says "overhanging edges trimmed" when that applies.
+5. Fine-tune with the `X / Y / Width / Height` boxes, quick presets
+   (Left / Right / Top / Bottom / Centre), or turn cropping off with the
+   *Cropping on* switch. **Keep the player's shape** locks the selection to the
+   player's aspect ratio, which makes Fit and Fill agree (no bars, no trim).
+
+Settings save automatically for the current channel (or VOD/clip). *Clear* in the
+panel footer forgets them.
+
+**Looping a VOD or clip**
+
+1. Open a VOD (`twitch.tv/videos/…`) or a clip.
+2. In the **Loop** section, type a start and a stop as `hh:mm:ss` (or `mm:ss`,
+   or plain seconds), or click *Start = now* / *Stop = now* to grab the current
+   playback position.
+3. Switch **Loop a segment** on. Playback plays the segment and jumps back to the
+   start each time it reaches the stop.
+4. *Max loops* limits how many times it repeats (`0` = endlessly).
+   *Jump to start* rewinds on demand.
+
+The stop time is optional: leave it blank to loop from the start to the end of
+the video.
+
+## How the crop actually works
+
+Twitch's player is a `<video>` element inside a container that is exactly the size
+of the picture and already clips its overflow. To crop, the extension:
+
+1. puts a marker attribute on the video and sets a few CSS custom properties on
+   `<html>`, and
+2. lets an injected stylesheet apply `clip-path` and
+   `transform: translate(…) scale(…)` with the origin at the centre of your
+   selected region.
+
+The scale factor is `min(boxW/regionW, boxH/regionH)` in **Fit** mode (the whole
+region is shown, centred, letterboxed on the long axis) or `max(…)` in **Fill**
+mode (the region fills the player and the overhang is cut). The `clip-path` is
+resolved in the video's own coordinates *before* the transform, so it describes
+your crop rectangle exactly, and the player's background is forced black so the
+letterbox bars are clean. Because it is a pure compositing operation, quality is
+identical to the uncropped stream.
+
+### A note on "without rendering the rest"
+
+A web page can only crop what it *paints*; the browser still decodes the full
+frame, because Twitch serves one encoded video and there is no way to decode only
+a sub-rectangle without re-muxing the stream (which would break Twitch's player).
+The crop therefore costs essentially nothing extra on the GPU, but it is not a
+reduction in decode work. Genuinely decoding less would mean a canvas pipeline
+that re-encodes every frame, which would lower quality, burn CPU, and break on
+DRM-protected content — so this extension deliberately doesn't do that.
+
+## Limitations
+
+- **Looping is VOD/clip only**, by design. Live streams are a moving target and
+  Twitch already offers its own rewind; the loop controls are disabled there and
+  cropping still works normally.
+- The crop only changes what you see, not what's downloaded.
+- If Twitch changes its player markup, the selector constants live in
+  `src/core.js` (`TC.pageInfo`, `TC.domChannel`, `pickVideo`/`contentBox`) and the
+  marker attributes are `data-tc-target` / `data-tc-crop`.
+
+## Files
+
+```
+manifest.json         Firefox MV3 manifest
+src/core.js           namespace, storage, page/video discovery, crop engine
+src/loop.js           VOD/clip segment looping
+src/panel.js          Shadow-DOM panel, launcher button, drag-to-select overlay
+src/main.js           bootstrap, SPA navigation, resize/reconcile
+src/background.js     toolbar button + keyboard shortcut relay
+src/styles.css        the single rule that applies the crop transform
+icons/icon.svg
+```

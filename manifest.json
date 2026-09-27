@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "Twitch Cropper",
+  "version": "1.0.0",
+  "description": "Crop and zoom any Twitch stream or VOD to just the part you want, and loop a segment of a VOD or clip.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "twitch-cropper@local.dev",
+      "strict_min_version": "115.0"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://twitch.tv/*",
+    "https://*.twitch.tv/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://twitch.tv/*",
+        "https://*.twitch.tv/*"
+      ],
+      "js": [
+        "src/core.js",
+        "src/loop.js",
+        "src/panel.js",
+        "src/main.js"
+      ],
+      "css": ["src/styles.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "background": {
+    "scripts": ["src/background.js"]
+  },
+  "action": {
+    "default_title": "Twitch Cropper",
+    "default_icon": "icons/icon.svg"
+  },
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Show or hide the Twitch Cropper panel"
+    },
+    "toggle-crop": {
+      "suggested_key": { "default": "Alt+Shift+C" },
+      "description": "Turn cropping on or off"
+    }
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  }
+}

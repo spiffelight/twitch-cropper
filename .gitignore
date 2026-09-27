@@ -1,0 +1,17 @@
+# web-ext build output
+web-ext-artifacts/
+
+# Packaged extensions
+*.xpi
+*.zip
+*.crx
+
+# Dependencies (none today, but harmless to be ready)
+node_modules/
+
+# Editor / OS cruft
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
