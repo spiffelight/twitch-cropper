@@ -71,8 +71,8 @@
     "box-shadow:0 6px 18px rgba(0,0,0,.5);display:grid;place-items:center;cursor:pointer;font-size:17px;user-select:none;touch-action:none}",
     ".fab:hover{border-color:#9147ff}",
     ".fab.active{border-color:#9147ff;background:#1f1230}",
-    ".returnbar{cursor:pointer;background:rgba(24,24,27,.9);color:#efeff1;border:1px solid #3a3a3d;border-radius:8px;padding:6px 10px;font:12px -apple-system,'Segoe UI',Roboto,sans-serif;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}",
-    ".returnbar:hover{border-color:#9147ff}"
+    ".returnbar{position:relative;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;cursor:pointer;user-select:none;background:rgba(24,24,27,.4);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.14);font:12px/1 -apple-system,'Segoe UI',Roboto,sans-serif;opacity:.3;transition:opacity .15s ease,background .15s ease,border-color .15s ease}",
+    ".returnbar:hover{opacity:1;background:rgba(24,24,27,.92);color:#fff;border-color:#9147ff}"
   ].join("");
 
   var PANEL_HTML =
@@ -763,16 +763,16 @@
     shadow.appendChild(style);
     var btn = document.createElement("div");
     btn.className = "returnbar";
-    btn.textContent = "\u2715 Close";
-    btn.title = "Close this window and go back to Twitch";
+    btn.textContent = "\u2715";
+    btn.title = "Close this window";
     btn.addEventListener("click", function () {
       TC.returnFromPopout();
     });
     shadow.appendChild(btn);
     mountHost(returnHost);
     returnHost.style.left = "auto";
-    returnHost.style.right = "10px";
-    returnHost.style.top = "10px";
+    returnHost.style.right = "8px";
+    returnHost.style.top = "8px";
   };
 
   ui.openPanel = function () {
