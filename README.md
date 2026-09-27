@@ -208,7 +208,7 @@ The manifest declares this as `data_collection_permissions.required: ["none"]`.
 |---|---|
 | <img src="Images/NoCrop.png" width="390"> | <img src="Images/Crop.png" width="390"> |
 | the ordinary 16:9 view | cropped to the webcam |
-| <img src="Images/CropPop-1280x800.png" width="390"> | <img src="Images/Menu-1280x800.png" width="390"> |
+| <img src="Images/CropPop.png" width="340"> | <img src="Images/Menu.png" width="150"> |
 | popped out into its own window | the panel |
 
 Screenshots are from the channel **Tobs** — thanks, Tobs!

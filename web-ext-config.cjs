@@ -9,7 +9,6 @@ module.exports = {
     'test',
     '.git',
     '.gitignore',
-    '.claude',
     'web-ext-artifacts',
     // Listing artwork: uploaded to AMO by hand, not part of the add-on.
     'Images',

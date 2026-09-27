@@ -11,7 +11,6 @@ node_modules/
 Thumbs.db
 desktop.ini
 
-# Editor tooling, not the add-on: nothing here is needed to build or submit.
+# Editor tooling, not the add-on.
 .vscode/
 .idea/
-.claude/
