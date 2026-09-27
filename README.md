@@ -39,7 +39,7 @@ Submitted to addons.mozilla.org; this repository is its source.
 
 ## Install (development)
 
-Firefox 115 or newer.
+Firefox 140 or newer.
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on…**.
@@ -186,16 +186,11 @@ npx web-ext lint       # must report 0 errors, 0 warnings
 npx web-ext build      # writes web-ext-artifacts/twitch_cropper-<version>.zip
 ```
 
-`test/fuzz.test.js` is a seeded stress suite that hammers the pure functions with
-NaN, Infinity, null, strings and out-of-range values, and asserts invariants only,
-so any failure is reproducible by iteration index. It found the two
-crop-normalisation bugs fixed here. `test/panel.test.js` walks the panel's DOM
-tree — built with `createElement`, never `innerHTML` — and checks that every
-control the rest of the code looks up by id still exists.
-
-`LISTING.md` and `REVIEWERS.md` are paste-ready text for the AMO submission
-fields. `web-ext-config.cjs` keeps `test/`, this README and those two files out of
-the packaged XPI.
+`test/` needs no dependencies: `node test/run.mjs` runs six suites covering time
+parsing and the crop geometry, the loop state machine, chat unload, the panel's
+DOM structure, and the popout. `test/fuzz.test.js` throws NaN, Infinity, null,
+strings and out-of-range values at the pure functions and asserts invariants
+only, so a failure is reproducible by iteration index.
 
 ## Privacy
 
@@ -229,9 +224,9 @@ Not affiliated with Twitch Interactive, Inc.
 ```
 manifest.json         Firefox MV3 manifest
 LICENSE               MIT
-LISTING.md            AMO listing copy (not packaged)
-REVIEWERS.md          notes for AMO reviewers (not packaged)
-web-ext-config.cjs    keeps development files out of the built XPI
+LISTING.md            the addons.mozilla.org listing text
+REVIEWERS.md          background for Mozilla's reviewers
+web-ext-config.cjs    web-ext lint/build configuration
 src/core.js           namespace, storage, page/video discovery, crop engine
 src/chat.js           chat unload / load
 src/loop.js           VOD/clip segment looping
@@ -239,6 +234,6 @@ src/panel.js          Shadow-DOM panel, launcher button, drag-to-select overlay
 src/main.js           bootstrap, SPA navigation, resize/reconcile, popout
 src/background.js     toolbar button, shortcuts, and the popout window
 src/styles.css        the single rule that applies the crop transform
-test/                 six suites and their runner (not packaged)
+test/                 six suites and their runner
 icons/icon.svg
 ```
