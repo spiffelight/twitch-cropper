@@ -15,9 +15,13 @@ function near(a, b, eps) { return Math.abs(a - b) <= (eps === undefined ? 1e-6 :
 const root = {
   attrs: {},
   props: {},
+  writes: 0,
   setAttribute(k, v) { this.attrs[k] = v; },
+  getAttribute(k) {
+    return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null;
+  },
   removeAttribute(k) { delete this.attrs[k]; },
-  style: { setProperty(k, v) { root.props[k] = v; } }
+  style: { setProperty(k, v) { root.props[k] = v; root.writes++; } }
 };
 
 global.window = global;
@@ -156,6 +160,9 @@ function makeVideo(w, h, vw, vh) {
     getBoundingClientRect: () => ({ width: w, height: h, left: 0, top: 0 }),
     attributes: {},
     setAttribute(k, v) { this.attributes[k] = v; },
+    getAttribute(k) {
+      return Object.prototype.hasOwnProperty.call(this.attributes, k) ? this.attributes[k] : null;
+    },
     removeAttribute(k) { delete this.attributes[k]; }
   };
 }
@@ -181,6 +188,35 @@ TC.state.crop.enabled = false;
 TC.applyCrop();
 ok("disabling removes crop flag", root.attrs["data-tc-crop"] === undefined);
 ok("disabling removes video marker", video.attributes["data-tc-target"] === undefined);
+
+console.log("\napplyCrop is idempotent (no repeated style writes)");
+const v2 = makeVideo(1000, 1000, 1920, 1080);
+TC.state.video = v2;
+TC.state.crop = { enabled: true, x: 0.2, y: 0.1, w: 0.5, h: 0.6, mode: "fit" };
+TC.applyCrop();
+const firstWrites = root.writes;
+TC.applyCrop();
+TC.applyCrop();
+ok("re-applying writes nothing while nothing changes", root.writes === firstWrites, { first: firstWrites, now: root.writes });
+ok("still cropped", root.attrs["data-tc-crop"] === "on");
+
+TC.state.crop.x = 0.3;
+const beforeChange = root.writes;
+TC.applyCrop();
+ok("a real change writes again", root.writes > beforeChange);
+
+const beforeRestore = root.writes;
+v2.removeAttribute("data-tc-target");
+TC.applyCrop();
+ok("restores the target marker if Twitch drops it", v2.getAttribute("data-tc-target") === "1" && root.writes > beforeRestore);
+
+TC.clearCrop();
+ok("clearCrop removes everything", root.attrs["data-tc-crop"] === undefined && v2.getAttribute("data-tc-target") === null);
+TC.applyCrop();
+ok("re-applies after being cleared", root.attrs["data-tc-crop"] === "on");
+const afterReapply = root.writes;
+TC.applyCrop();
+ok("then goes quiet again", root.writes === afterReapply);
 
 console.log("\nregressions found by the fuzzer");
 ok("NaN width is rejected, not propagated", Number.isFinite(TC.normalizeCrop({ w: NaN }).w));

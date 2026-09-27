@@ -184,7 +184,11 @@
   /* ------------------------------------------------------------- reconcile */
 
   function reconcile() {
-    var v = TC.pickVideo();
+    // Stick with the video we are already cropping while it is still on screen.
+    // Twitch can briefly add a second <video> (ads, previews) and re-picking on
+    // every tick makes the crop jump between elements and flash.
+    var v = TC.state.video;
+    if (!v || !TC.isUsableVideo(v)) v = TC.pickVideo();
     if (v !== TC.state.video) {
       TC.state.video = v;
       if (TC.state.marked && !TC.state.marked.isConnected) TC.state.marked = null;

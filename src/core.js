@@ -248,6 +248,10 @@
     return cs.display !== "none" && cs.visibility !== "hidden";
   }
 
+  // Exposed so the bootstrap can tell whether the video it is already using is
+  // still on screen, rather than re-picking and flapping between elements.
+  TC.isUsableVideo = isUsable;
+
   // Pick the most "primary" video on the page: the big, visible, playing one.
   TC.pickVideo = function () {
     var all = document.querySelectorAll("video");
@@ -389,8 +393,24 @@
       return false;
     }
 
+    // Doing this on a timer means writing the same values over and over. Skip
+    // it when nothing has changed: the repeated style writes are what makes the
+    // picture flash back to uncropped for a frame.
+    var key = crop.x + "|" + crop.y + "|" + crop.w + "|" + crop.h + "|" +
+      crop.mode + "|" + W + "|" + H;
+    if (
+      TC._appliedVideo === video &&
+      TC._appliedKey === key &&
+      video.getAttribute(CROP_ATTR) === "1" &&
+      root.getAttribute("data-tc-crop") === "on"
+    ) {
+      return true;
+    }
+
     video.setAttribute(CROP_ATTR, "1");
     TC.state.marked = video;
+    TC._appliedVideo = video;
+    TC._appliedKey = key;
     root.style.setProperty("--tc-s", String(t.s));
     root.style.setProperty("--tc-ox", t.ox + "px");
     root.style.setProperty("--tc-oy", t.oy + "px");
@@ -405,6 +425,8 @@
   };
 
   TC.clearCrop = function () {
+    TC._appliedVideo = null;
+    TC._appliedKey = null;
     try {
       document.documentElement.removeAttribute("data-tc-crop");
     } catch (e) {}
