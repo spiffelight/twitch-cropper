@@ -22,12 +22,16 @@
   var scopeToken = 0;
   var reconcileQueued = false;
   var active = false;
-  // Only true inside a popout this extension just opened, which *is* a request
+
+  // True only inside a popout this extension just opened, which *is* a request
   // to crop. Everywhere else cropping starts switched off.
   var forceCropOn = false;
 
-  var POP_KEY = "tc.popout";
-  var RETURN_HASH = "#tc-active";
+  // A fixed window name makes repeated clicks reuse the same popout window
+  // instead of piling up new ones. The size travels in the URL hash, so the new
+  // window knows what to do the instant it loads (no storage round-trip to lose).
+  var POPOUT_NAME = "twitch-cropper-popout";
+  var POPOUT_HASH = /#tc=(\d+)x(\d+)/;
 
   /* ------------------------------------------------------------- page keys */
 
@@ -111,63 +115,40 @@
 
   /* ----------------------------------------------------------- popout mode */
 
-  function savePopoutRequest() {
-    var size = TC.popoutSize();
-    TC.setStored(POP_KEY, {
-      url: location.href,
-      path: location.pathname + location.search,
-      w: size.width,
-      h: size.height,
-      ts: Date.now()
-    });
-  }
-
-  function clearPopoutRequest() {
-    TC.removeStored(POP_KEY);
-  }
-
   // Open the cropped, player-only view in its own window, sized to the crop.
   // A real window is the only thing that can hide the browser chrome *and* be
   // resized to the crop; a normal tab can do neither.
   TC.enterPopout = function () {
-    var url = TC.popoutUrl();
-    if (!url) return false;
+    var base = TC.popoutUrl();
+    if (!base) return false;
     var size = TC.popoutSize();
-    savePopoutRequest();
+    var url = base + "#tc=" + size.width + "x" + size.height;
     var features =
       "width=" + size.width + ",height=" + size.height +
-      ",toolbar=no,menubar=no,scrollbars=no,location=no,status=no,resizable=yes";
+      ",toolbar=no,menubar=no,personalbar=no,scrollbars=no,location=no,status=no,resizable=yes";
     var win = null;
     try {
-      win = window.open(url, "_blank", features);
+      win = window.open(url, POPOUT_NAME, features);
     } catch (e) {}
-    if (!win) {
-      clearPopoutRequest();
-      return "blocked";
-    }
+    if (!win) return "blocked";
+    try {
+      win.focus();
+    } catch (e) {}
     return true;
   };
 
   // Leave the popout: close the window, or fall back to navigating if the
   // browser will not let us close it.
-  TC.returnFromPopout = function (url) {
-    clearPopoutRequest();
+  TC.returnFromPopout = function () {
     try {
       window.close();
     } catch (e) {}
     setTimeout(function () {
-      var target = url || "https://www.twitch.tv/";
-      location.href = target + (target.indexOf("#") === -1 ? RETURN_HASH : "");
+      try {
+        location.href = "https://www.twitch.tv/";
+      } catch (e) {}
     }, 250);
   };
-
-  function consumeReturnHash() {
-    if (location.hash !== RETURN_HASH) return false;
-    try {
-      history.replaceState(null, "", location.pathname + location.search);
-    } catch (e) {}
-    return true;
-  }
 
   /* ------------------------------------------------------------- reconcile */
 
@@ -281,32 +262,25 @@
   }
 
   function init() {
-    var returning = consumeReturnHash();
-
-    // The player-only popout: apply the crop, offer a way back, no panel.
+    // The player-only popout this extension opened: crop it and offer a way out.
     if (TC.isPopout) {
+      var m = POPOUT_HASH.exec(location.hash);
+      if (m) {
+        forceCropOn = true;
+        try {
+          history.replaceState(null, "", location.pathname + location.search);
+        } catch (e) {}
+        // window.open's width/height include browser chrome, so correct for it
+        // and make the *content* match the crop exactly.
+        try {
+          var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
+          var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
+          window.resizeTo(parseInt(m[1], 10) + chromeW, parseInt(m[2], 10) + chromeH);
+        } catch (e) {}
+        TC.ui.showReturnBar();
+        setActive(true);
+      }
       start();
-      TC.getStored(POP_KEY, null)
-        .then(function (req) {
-          // Only act on a popout this extension opened, moments ago. The request
-          // is transient and is cleared as soon as it has been used. Twitch's own
-          // popout, and any older one, is left completely alone.
-          if (!req || !req.ts || Date.now() - req.ts > 60000) return;
-          forceCropOn = true;
-          TC.state.crop.enabled = true;
-          setActive(true);
-          // window.open's width/height include browser chrome, so correct for
-          // it and make the *content* match the crop exactly.
-          try {
-            var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
-            var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
-            window.resizeTo(req.w + chromeW, req.h + chromeH);
-          } catch (e) {}
-          TC.ui.showReturnBar(req.url || null);
-          clearPopoutRequest();
-          reconcile();
-        })
-        .catch(function () {});
       return;
     }
 
@@ -321,8 +295,6 @@
         return TC.chat.init();
       })
       .then(function () {
-        // Coming back from the popout: carry on where we left off.
-        if (returning) setActive(true);
         start();
       });
   }

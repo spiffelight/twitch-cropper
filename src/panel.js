@@ -753,7 +753,7 @@
 
   // Shown only in the player-only popout window, so there is always a way back.
   var returnHost = null;
-  ui.showReturnBar = function (url) {
+  ui.showReturnBar = function () {
     if (returnHost) return;
     var made = makeHost("twitch-cropper-return");
     returnHost = made.host;
@@ -766,7 +766,7 @@
     btn.textContent = "\u2715 Close";
     btn.title = "Close this window and go back to Twitch";
     btn.addEventListener("click", function () {
-      TC.returnFromPopout(url);
+      TC.returnFromPopout();
     });
     shadow.appendChild(btn);
     mountHost(returnHost);
