@@ -224,8 +224,6 @@ Not affiliated with Twitch Interactive, Inc.
 ```
 manifest.json         Firefox MV3 manifest
 LICENSE               MIT
-LISTING.md            the addons.mozilla.org listing text
-REVIEWERS.md          background for Mozilla's reviewers
 web-ext-config.cjs    web-ext lint/build configuration
 src/core.js           namespace, storage, page/video discovery, crop engine
 src/chat.js           chat unload / load
