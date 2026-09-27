@@ -99,7 +99,7 @@ console.log("\nevery control the code looks up by id");
 const IDS = [
   "enabled", "select", "x", "y", "w", "h", "reset", "popout", "cropHint",
   "loopWrap", "loopEnabled", "loopStart", "loopStop", "startNow", "stopNow",
-  "jumpStart", "maxLoops", "loopCount", "loopHint", "liveNote",
+  "jumpStart", "maxLoops", "loopCount", "continueAfter", "loopHint", "liveNote",
   "chatToggle", "chatHint", "scope", "off", "resetAll"
 ];
 const missing = IDS.filter((id) => !byId(panel, id));

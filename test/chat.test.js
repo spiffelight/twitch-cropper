@@ -39,7 +39,9 @@ function makeChat() {
     _connected: true,
     parentNode: null,
     nextSibling: null,
-    get isConnected() { return this._connected; }
+    get isConnected() { return this._connected; },
+    contains(other) { return other === this; },
+    querySelectorAll() { return []; }
   };
 }
 

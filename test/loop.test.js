@@ -36,7 +36,8 @@ let uiEvents = [];
 TC.ui = { onLoopStateChange: (r) => uiEvents.push(r) };
 
 function makeVideo(duration) {
-  const v = { duration, paused: false, seeking: false, isConnected: true, seeks: [] };
+  const v = { duration, paused: false, seeking: false, isConnected: true, seeks: [], pauses: 0 };
+  v.pause = () => { v.pauses++; v.paused = true; };
   const subs = {};
   v.addEventListener = (type, fn) => { (subs[type] = subs[type] || []).push(fn); };
   v.removeEventListener = (type, fn) => {
@@ -118,6 +119,29 @@ ok("stops after maxLoops", TC.loop.running === false && TC.loop.done === true, {
 });
 v.currentTime = 20; timeupdate();
 ok("does not restart itself after finishing", TC.loop.running === false && TC.loop.loops === 2);
+
+console.log("\nfinishing: stop after the last loop (default) or play on");
+TC.loop.load({ enabled: true, start: 10, stop: 20, maxLoops: 1 });
+TC.loop.startRuntime();
+document.hidden = true;
+v.paused = false;
+v.currentTime = 20; timeupdate();
+v.emit("seeked");
+v.pauses = 0;
+v.currentTime = 20; timeupdate();
+ok("default stops playback after the last loop", v.pauses === 1 && TC.loop.done === true, { pauses: v.pauses, done: TC.loop.done });
+
+TC.loop.load({ enabled: true, start: 10, stop: 20, maxLoops: 1, continueAfter: true });
+TC.loop.startRuntime();
+v.paused = false;
+v.pauses = 0;
+v.currentTime = 20; timeupdate();
+v.emit("seeked");
+v.currentTime = 20; timeupdate();
+ok("Continue after max loops keeps playing", v.pauses === 0 && TC.loop.done === true, { pauses: v.pauses, done: TC.loop.done });
+
+ok("continueAfter round-trips through serialize", TC.loop.serialize().continueAfter === true);
+ok("and defaults to off", (function () { TC.loop.load({ enabled: true, start: 1, stop: 2 }); return TC.loop.serialize().continueAfter === false; })());
 
 console.log("\nstart < stop validation");
 TC.loop.load({ enabled: true, start: 30, stop: 20, maxLoops: 0 });

@@ -165,6 +165,7 @@
           field("Max loops (0 = \u221e)", { type: "number", id: "maxLoops", min: "0", step: "1", value: "0" }),
           field("Completed", { type: "text", id: "loopCount", readonly: "", value: "0" })
         ]),
+        switchRow({ type: "checkbox", id: "continueAfter" }, "Continue after max loops"),
         h("div", { cls: "hint", id: "loopHint" })
       ]),
       h("div", { cls: "hint", id: "liveNote", style: "display:none", text: "Looping is for VODs and clips only." }),
@@ -364,6 +365,7 @@
       setValue(els.loopStart, L.start == null ? "" : TC.formatTime(L.start));
       setValue(els.loopStop, L.stop == null ? "" : TC.formatTime(L.stop));
       setValue(els.maxLoops, String(L.maxLoops || 0));
+      els.continueAfter.checked = !!L.continueAfter;
       els.loopCount.value = String(L.loops || 0);
 
       var canLoop = TC.canLoopHere();
@@ -418,7 +420,8 @@
     persistDebounced(TC.state.loopKey, {
       start: TC.loop.start,
       stop: TC.loop.stop,
-      maxLoops: TC.loop.maxLoops
+      maxLoops: TC.loop.maxLoops,
+      continueAfter: TC.loop.continueAfter
     });
   }
 
@@ -509,6 +512,7 @@
     els.jumpStart = shadow.getElementById("jumpStart");
     els.maxLoops = shadow.getElementById("maxLoops");
     els.loopCount = shadow.getElementById("loopCount");
+    els.continueAfter = shadow.getElementById("continueAfter");
     els.loopHint = shadow.getElementById("loopHint");
     els.liveNote = shadow.getElementById("liveNote");
     els.chatToggle = shadow.getElementById("chatToggle");
@@ -645,6 +649,13 @@
       persistLoop();
     });
 
+    els.continueAfter.addEventListener("change", function () {
+      if (syncing) return;
+      TC.loop.continueAfter = els.continueAfter.checked;
+      updateLoopHint();
+      persistLoop();
+    });
+
     els.min.addEventListener("click", function () {
       uiSettings.collapsed = !uiSettings.collapsed;
       els.panel.classList.toggle("collapsed", uiSettings.collapsed);
@@ -722,9 +733,13 @@
       els.loopHint.textContent = "Stop must be after start.";
       return;
     }
+    var tail = "";
+    if (TC.loop.maxLoops > 0) {
+      tail = " \u00b7 " + TC.loop.maxLoops + " times, then " +
+        (TC.loop.continueAfter ? "play on" : "stop");
+    }
     els.loopHint.textContent =
-      "Looping " + TC.formatTime(TC.loop.start) + " \u2192 " + TC.formatTime(stop) +
-      (TC.loop.maxLoops > 0 ? " \u00b7 max " + TC.loop.maxLoops : "");
+      "Looping " + TC.formatTime(TC.loop.start) + " \u2192 " + TC.formatTime(stop) + tail;
   }
 
   function buildFab() {

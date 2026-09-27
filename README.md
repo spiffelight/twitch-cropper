@@ -88,8 +88,9 @@ panel footer forgets them.
    playback position.
 3. Switch **Loop a segment** on. Playback plays the segment and jumps back to the
    start each time it reaches the stop.
-4. *Max loops* limits how many times it repeats (`0` = endlessly).
-   *Jump to start* rewinds on demand.
+4. *Max loops* limits how many times it repeats (`0` = endlessly). When the last
+   loop finishes it **stops there** by default; tick *Continue after max loops* to
+   keep playing past the stop point instead. *Jump to start* rewinds on demand.
 
 The stop time is optional: leave it blank to loop from the start to the end of
 the video.

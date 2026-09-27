@@ -23,6 +23,7 @@
     start: null,
     stop: null,
     maxLoops: 0, // 0 = endless
+    continueAfter: false, // after the last loop: false = stop, true = play on
     loops: 0,
     running: false,
     done: false, // reached maxLoops and stopped on purpose
@@ -36,6 +37,7 @@
     L.start = null;
     L.stop = null;
     L.maxLoops = 0;
+    L.continueAfter = false;
     L.loops = 0;
     L.done = false;
     L.seeking = false;
@@ -46,7 +48,8 @@
       enabled: L.enabled,
       start: L.start,
       stop: L.stop,
-      maxLoops: L.maxLoops
+      maxLoops: L.maxLoops,
+      continueAfter: L.continueAfter
     };
   };
 
@@ -57,6 +60,7 @@
     L.start = typeof raw.start === "number" && isFinite(raw.start) ? raw.start : null;
     L.stop = typeof raw.stop === "number" && isFinite(raw.stop) ? raw.stop : null;
     L.maxLoops = typeof raw.maxLoops === "number" && raw.maxLoops > 0 ? Math.floor(raw.maxLoops) : 0;
+    L.continueAfter = !!raw.continueAfter;
   };
 
   // Looping only makes sense on VODs and clips with a real, finite timeline.
@@ -124,6 +128,13 @@
     if (v.currentTime < stop - EPS) return;
 
     if (L.maxLoops > 0 && L.loops >= L.maxLoops) {
+      // Stopping after the last loop is the default; "Continue after max loops"
+      // leaves playback running past the stop point instead.
+      if (!L.continueAfter && !v.paused) {
+        try {
+          v.pause();
+        } catch (e) {}
+      }
       finish("done");
       return;
     }

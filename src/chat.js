@@ -18,8 +18,11 @@
   TC.__chatReady = true;
 
   // Ordered from outermost to innermost; the first that matches is detached.
+  // Live channel pages wrap the chat in .stream-chat; VOD pages use
+  // .chat-shell instead, with .video-chat inside it. Both are the whole column.
   var CANDIDATES = [
     ".stream-chat",
+    ".chat-shell",
     '[data-test-selector="chat-room-component-layout"]',
     '[data-a-target^="chat-theme"]',
     '[data-a-target="chat-scroller"]'
@@ -29,12 +32,30 @@
   var pref = false; // the user wants chat unloaded
   var lastAttempt = 0;
 
+  function contains(outer, inner) {
+    return typeof outer.contains === "function" && outer.contains(inner);
+  }
+
   function findChat() {
+    var found = [];
     for (var i = 0; i < CANDIDATES.length; i++) {
       var el = document.querySelector(CANDIDATES[i]);
-      if (el && el.isConnected) return el;
+      if (el && el.isConnected) found.push(el);
     }
-    return null;
+    if (!found.length) return null;
+    // If more than one matches, take the outermost, so the whole column goes
+    // rather than an inner part of it.
+    for (var j = 0; j < found.length; j++) {
+      var outermost = true;
+      for (var k = 0; k < found.length; k++) {
+        if (j !== k && contains(found[k], found[j])) {
+          outermost = false;
+          break;
+        }
+      }
+      if (outermost) return found[j];
+    }
+    return found[0];
   }
 
   function detach(node) {
