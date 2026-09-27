@@ -27,9 +27,12 @@
   // to crop. Everywhere else cropping starts switched off.
   var forceCropOn = false;
 
-  // The size travels in the URL hash, so the popout knows what to do the
-  // instant it loads (no storage round-trip to lose).
+  // A popout is identified two independent ways, because losing the marker
+  // means an uncropped window with no way back: a `#tc=WxH` marker in the URL,
+  // and a short-lived record written to storage before the window is opened.
+  // Whichever survives, the popout knows it is ours and how big to be.
   var POPOUT_HASH = /#tc=(\d+)x(\d+)/;
+  var POP_KEY = "tc.popout";
 
   /* ------------------------------------------------------------- page keys */
 
@@ -121,18 +124,54 @@
     if (!base) return false;
     var size = TC.popoutSize();
     var url = base + "#tc=" + size.width + "x" + size.height;
-    try {
-      browser.runtime.sendMessage({
-        type: "tc-popout",
-        url: url,
-        width: size.width,
-        height: size.height
-      });
-    } catch (e) {
-      return false;
-    }
+    // Record the request *and wait for it* before opening the window, so the
+    // popout can identify itself even if the URL marker is dropped on the way.
+    TC.setStored(POP_KEY, {
+      path: location.pathname + location.search,
+      w: size.width,
+      h: size.height,
+      ts: Date.now()
+    }).then(function () {
+      try {
+        browser.runtime.sendMessage({
+          type: "tc-popout",
+          url: url,
+          width: size.width,
+          height: size.height
+        });
+      } catch (e) {}
+    });
     return true;
   };
+
+  // Crop this window and give it a way back. Only ever called when we are sure
+  // the popout is one this extension opened, so Twitch's own popout is left be.
+  function beginPopout(width, height) {
+    forceCropOn = true;
+    try {
+      history.replaceState(null, "", location.pathname + location.search);
+    } catch (e) {}
+    try {
+      var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
+      var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
+      browser.runtime.sendMessage({
+        type: "tc-resize",
+        width: Math.round(width) + chromeW,
+        height: Math.round(height) + chromeH
+      });
+    } catch (e) {}
+    TC.ui.showReturnBar();
+    setActive(true);
+    TC.removeStored(POP_KEY);
+
+    // If there was nothing saved to crop for this stream, say so rather than
+    // leaving a plain window behind with no explanation.
+    setTimeout(function () {
+      try {
+        if (!TC.state.cropKey && TC.ui.toast) TC.ui.toast("No crop saved for this stream yet.");
+      } catch (e) {}
+    }, 2500);
+  }
 
   // Hand the tab back: the background moves it to a normal window if there is
   // one, restores the normal Twitch page and drops the popup window.
@@ -258,25 +297,22 @@
     if (TC.isPopout) {
       var m = POPOUT_HASH.exec(location.hash);
       if (m) {
-        forceCropOn = true;
-        try {
-          history.replaceState(null, "", location.pathname + location.search);
-        } catch (e) {}
-        // Ask the background to size the window so its *content* matches the
-        // crop exactly (the window's own chrome is measured here).
-        try {
-          var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
-          var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
-          browser.runtime.sendMessage({
-            type: "tc-resize",
-            width: parseInt(m[1], 10) + chromeW,
-            height: parseInt(m[2], 10) + chromeH
-          });
-        } catch (e) {}
-        TC.ui.showReturnBar();
-        setActive(true);
+        beginPopout(parseInt(m[1], 10), parseInt(m[2], 10));
+        start();
+        return;
       }
-      start();
+      // The URL marker did not survive, so fall back to the record written just
+      // before this window was opened.
+      TC.getStored(POP_KEY, null)
+        .then(function (req) {
+          if (TC.isOurPopout(req, location.pathname + location.search, Date.now())) {
+            beginPopout(req.w, req.h);
+          }
+          start();
+        })
+        .catch(function () {
+          start();
+        });
       return;
     }
 

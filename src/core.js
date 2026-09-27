@@ -451,6 +451,16 @@
     return "https://player.twitch.tv/?" + params.join("&");
   };
 
+  // True when a stored popout record means *this* window is one the extension
+  // opened: it must be recent, and not the page that asked for it. Anything
+  // else (an old record, or Twitch's own popout) is left alone.
+  TC.isOurPopout = function (req, atPath, now) {
+    if (!req || !req.ts) return false;
+    if (now - req.ts > 120000) return false;
+    if (req.path && req.path === atPath) return false;
+    return true;
+  };
+
   // Where the popout should send its window back to.
   TC.returnUrl = function () {
     var info = TC.pageInfo();

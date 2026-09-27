@@ -60,6 +60,15 @@ ok("main channel page", rpMain.returnUrl() === "https://www.twitch.tv/emiru", rp
 const rpHome = loadCore("www.twitch.tv", "", "/directory");
 ok("no channel -> twitch home", rpHome.returnUrl() === "https://www.twitch.tv/", rpHome.returnUrl());
 
+console.log("\nidentifying our own popout record");
+const T = 1000000;
+ok("fresh record from another page -> ours", pop.isOurPopout({ path: "/emiru", ts: T }, "/", T + 1000) === true);
+ok("stale record -> not ours", pop.isOurPopout({ path: "/emiru", ts: T }, "/", T + 120001) === false);
+ok("record made by this very page -> not ours", pop.isOurPopout({ path: "/", ts: T }, "/", T + 1000) === false);
+ok("no record -> not ours", pop.isOurPopout(null, "/", T) === false);
+ok("record with no timestamp -> not ours", pop.isOurPopout({ path: "/emiru" }, "/", T) === false);
+ok("Twitch's own popout (nothing stored) -> not ours", pop.isOurPopout(undefined, "/", T) === false);
+
 console.log("\nmain site: window size fitted to the crop");
 const sizer = loadCore("www.twitch.tv", "", "/emiru");
 sizer.state.video = { videoWidth: 1920, videoHeight: 1080 };
