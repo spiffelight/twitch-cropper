@@ -26,15 +26,16 @@
   var PANEL_CSS = [
     ":host{all:initial}",
     "*{box-sizing:border-box}",
-    ".panel{width:262px;background:#18181b;color:#efeff1;border:1px solid #2f2f35;border-radius:12px;",
+    ".panel{width:min(262px,calc(100vw - 20px));max-height:calc(100vh - 20px);display:flex;flex-direction:column;background:#18181b;color:#efeff1;border:1px solid #2f2f35;border-radius:12px;",
     "box-shadow:0 12px 34px rgba(0,0,0,.55);font:13px/1.45 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}",
-    ".head{display:flex;align-items:center;gap:8px;padding:9px 10px;background:#1f1f23;border-bottom:1px solid #2f2f35;cursor:grab;user-select:none;touch-action:none}",
+    ".head{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px;background:#1f1f23;border-bottom:1px solid #2f2f35;cursor:grab;user-select:none;touch-action:none}",
     ".head:active{cursor:grabbing}",
     ".dot{width:20px;height:20px;flex:0 0 auto;border-radius:6px;background:#9147ff;display:grid;place-items:center;font-size:12px;line-height:1}",
     ".name{font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
     ".ico{all:unset;cursor:pointer;width:22px;height:22px;display:grid;place-items:center;border-radius:6px;color:#adadb8;font-size:16px}",
     ".ico:hover{background:#2f2f35;color:#fff}",
-    ".body{padding:10px 11px 11px;display:flex;flex-direction:column;gap:9px;max-height:min(74vh,620px);overflow:auto}",
+    ".body{flex:1 1 auto;min-height:0;padding:9px 10px 10px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden}",
+    ".body>*{flex:0 0 auto}",
     ".panel.collapsed .body{display:none}",
     ".panel.collapsed .foot{display:none}",
     ".sec{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#adadb8}",
@@ -61,7 +62,7 @@
     ".hint{font-size:11px;color:#8f8f99;min-height:0}",
     ".hint.warn{color:#ffb31a}",
     ".sep{height:1px;background:#2f2f35;margin:1px 0}",
-    ".foot{display:flex;align-items:center;gap:8px;padding:8px 11px;border-top:1px solid #2f2f35;background:#161619;font-size:11px;color:#8f8f99}",
+    ".foot{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid #2f2f35;background:#161619;font-size:11px;color:#8f8f99}",
     ".foot span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
     ".link{all:unset;cursor:pointer;color:#bf94ff;font-size:11px}",
     ".link:hover{text-decoration:underline}",
@@ -122,7 +123,7 @@
     "      </div>" +
     '      <div class="hint" id="loopHint"></div>' +
     "    </div>" +
-    '    <div class="hint" id="liveNote" style="display:none">Looping works on VODs and clips. Live streams can\u2019t be looped \u2014 cropping still works.</div>' +
+    '    <div class="hint" id="liveNote" style="display:none">Looping is for VODs and clips only.</div>' +
     '    <div class="sep"></div>' +
     '    <div class="sec">Chat</div>' +
     '    <button class="btn" id="chatToggle">Unload chat</button>' +
