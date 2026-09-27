@@ -262,21 +262,16 @@
       start();
       TC.getStored(POP_KEY, null)
         .then(function (req) {
+          // Only act on a popout this extension opened. Twitch's own popout is
+          // left completely alone, so "off by default" still holds.
+          if (!req || !req.ts || Date.now() - req.ts > 3600000) return;
           setActive(true);
-          var fresh = req && req.ts && Date.now() - req.ts < 3600000;
-          if (fresh) {
-            try {
-              window.resizeTo(req.w, req.h);
-            } catch (e) {}
-            TC.ui.showReturnBar(req.url);
-          } else {
-            TC.ui.showReturnBar(null);
-          }
+          try {
+            window.resizeTo(req.w, req.h);
+          } catch (e) {}
+          TC.ui.showReturnBar(req.url || null);
         })
-        .catch(function () {
-          setActive(true);
-          TC.ui.showReturnBar(null);
-        });
+        .catch(function () {});
       return;
     }
 
