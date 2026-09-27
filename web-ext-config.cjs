@@ -12,6 +12,8 @@ module.exports = {
     '.gitignore',
     '.claude',
     'web-ext-artifacts',
+    // Listing artwork: uploaded to AMO by hand, not part of the add-on.
+    'Images',
     'README.md',
     'REVIEWERS.md',
     'LISTING.md',
