@@ -2,11 +2,17 @@
   "manifest_version": 3,
   "name": "Twitch Cropper",
   "version": "1.0.0",
-  "description": "Crop and zoom any Twitch stream or VOD to just the part you want, and loop a segment of a VOD or clip.",
+  "description": "Crop and zoom any Twitch stream, VOD or clip to just the part you want, loop a segment of a VOD or clip, unload chat, and pop the crop out into its own window.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "twitch-cropper@local.dev",
-      "strict_min_version": "115.0"
+      "id": "{af2b2570-4f93-4ee0-a9bf-86aaa5c0da49}",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
     }
   },
   "permissions": ["storage"],

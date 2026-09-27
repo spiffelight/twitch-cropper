@@ -75,68 +75,125 @@
     ".returnbar:hover{opacity:1;background:rgba(24,24,27,.92);color:#fff;border-color:#9147ff}"
   ].join("");
 
-  var PANEL_HTML =
-    '<div class="panel" id="panel">' +
-    '  <div class="head" id="head">' +
-    '    <span class="dot">\u2702</span>' +
-    '    <span class="name">Twitch Cropper</span>' +
-    '    <button class="ico" id="min" title="Collapse">\u2212</button>' +
-    '    <button class="ico" id="close" title="Hide panel (reopen with the \u2702 button or the toolbar icon)">\u2715</button>' +
-    "  </div>" +
-    '  <div class="body">' +
-    '    <div class="sec">Crop</div>' +
-    '    <label class="switch"><input type="checkbox" id="enabled"><span class="track"></span><span>Cropping on</span></label>' +
-    '    <button class="btn primary" id="select">Select region\u2026</button>' +
-    '    <div class="row">' +
-    '      <button class="chip" data-mode="fit" title="Show the whole crop and shape the player to it">Fit crop</button>' +
-    '      <button class="chip" data-mode="fill" title="Fill the player with the crop, trimming any overhang">Fill player</button>' +
-    "    </div>" +
-    '    <div class="row">' +
-    '      <button class="chip" data-preset="left">Left</button>' +
-    '      <button class="chip" data-preset="right">Right</button>' +
-    '      <button class="chip" data-preset="top">Top</button>' +
-    '      <button class="chip" data-preset="bottom">Bottom</button>' +
-    '      <button class="chip" data-preset="center">Centre</button>' +
-    "    </div>" +
-    '    <div class="grid">' +
-    '      <label class="field">X %<input type="number" id="x" min="0" max="100" step="0.5"></label>' +
-    '      <label class="field">Y %<input type="number" id="y" min="0" max="100" step="0.5"></label>' +
-    '      <label class="field">Width %<input type="number" id="w" min="0" max="100" step="0.5"></label>' +
-    '      <label class="field">Height %<input type="number" id="h" min="0" max="100" step="0.5"></label>' +
-    "    </div>" +
-    '    <div class="row"><button class="chip" id="reset">Reset crop</button></div>' +
-    '    <div class="row"><button class="chip" id="popout">Pop out cropped window</button></div>' +
-    '    <div class="hint" id="cropHint"></div>' +
-    '    <div class="sep"></div>' +
-    '    <div class="sec">Loop (VODs &amp; clips)</div>' +
-    '    <div id="loopWrap">' +
-    '      <label class="switch"><input type="checkbox" id="loopEnabled"><span class="track"></span><span>Loop a segment</span></label>' +
-    '      <div class="grid" style="margin-top:7px">' +
-    '        <label class="field">Start<input type="text" id="loopStart" placeholder="hh:mm:ss"></label>' +
-    '        <label class="field">Stop<input type="text" id="loopStop" placeholder="hh:mm:ss"></label>' +
-    "      </div>" +
-    '      <div class="row" style="margin-top:6px">' +
-    '        <button class="chip" id="startNow">Start = now</button>' +
-    '        <button class="chip" id="stopNow">Stop = now</button>' +
-    '        <button class="chip" id="jumpStart">Jump to start</button>' +
-    "      </div>" +
-    '      <div class="grid" style="margin-top:6px">' +
-    '        <label class="field">Max loops (0 = \u221e)<input type="number" id="maxLoops" min="0" step="1" value="0"></label>' +
-    '        <label class="field">Completed<input type="text" id="loopCount" readonly value="0"></label>' +
-    "      </div>" +
-    '      <div class="hint" id="loopHint"></div>' +
-    "    </div>" +
-    '    <div class="hint" id="liveNote" style="display:none">Looping is for VODs and clips only.</div>' +
-    '    <div class="sep"></div>' +
-    '    <div class="sec">Chat</div>' +
-    '    <button class="btn" id="chatToggle">Unload chat</button>' +
-    '    <div class="hint" id="chatHint"></div>' +
-    "  </div>" +
-    '  <div class="foot"><span id="scope">Not saved yet</span><button class="link" id="off">Turn off</button><button class="link" id="resetAll">Reset</button></div>' +
-    "</div>";
+  /*
+   * The panel is built with createElement rather than innerHTML: no markup is
+   * ever parsed, so nothing untrusted could ever be treated as HTML, and the
+   * add-on ships without unsafe-assignment warnings.
+   */
+  function h(tag, props, kids) {
+    var node = document.createElement(tag);
+    if (props) {
+      Object.keys(props).forEach(function (key) {
+        var value = props[key];
+        if (key === "text") node.textContent = value;
+        else if (key === "cls") node.className = value;
+        else if (key === "style") node.style.cssText = value;
+        else node.setAttribute(key, value);
+      });
+    }
+    if (kids) {
+      kids.forEach(function (kid) {
+        if (kid) node.appendChild(kid);
+      });
+    }
+    return node;
+  }
 
-  var FAB_HTML =
-    '<div class="fab" id="fab" title="Twitch Cropper (Alt+Shift+P)">\u2702</div>';
+  function switchRow(inputProps, label) {
+    return h("label", { cls: "switch" }, [
+      h("input", inputProps),
+      h("span", { cls: "track" }),
+      h("span", { text: label })
+    ]);
+  }
+
+  function field(label, inputProps) {
+    return h("label", { cls: "field" }, [document.createTextNode(label), h("input", inputProps)]);
+  }
+
+  function chip(props, label) {
+    var p = { cls: "chip", text: label };
+    Object.keys(props || {}).forEach(function (key) {
+      p[key] = props[key];
+    });
+    return h("button", p);
+  }
+
+  function panelTree() {
+    var presets = [
+      ["left", "Left"],
+      ["right", "Right"],
+      ["top", "Top"],
+      ["bottom", "Bottom"],
+      ["center", "Centre"]
+    ];
+
+    var body = h("div", { cls: "body" }, [
+      h("div", { cls: "sec", text: "Crop" }),
+      switchRow({ type: "checkbox", id: "enabled" }, "Cropping on"),
+      h("button", { cls: "btn primary", id: "select", text: "Select region\u2026" }),
+      h("div", { cls: "row" }, [
+        chip({ "data-mode": "fit", title: "Show the whole crop and shape the player to it" }, "Fit crop"),
+        chip({ "data-mode": "fill", title: "Fill the player with the crop, trimming any overhang" }, "Fill player")
+      ]),
+      h("div", { cls: "row" }, presets.map(function (p) {
+        return chip({ "data-preset": p[0] }, p[1]);
+      })),
+      h("div", { cls: "grid" }, [
+        field("X %", { type: "number", id: "x", min: "0", max: "100", step: "0.5" }),
+        field("Y %", { type: "number", id: "y", min: "0", max: "100", step: "0.5" }),
+        field("Width %", { type: "number", id: "w", min: "0", max: "100", step: "0.5" }),
+        field("Height %", { type: "number", id: "h", min: "0", max: "100", step: "0.5" })
+      ]),
+      h("div", { cls: "row" }, [chip({ id: "reset" }, "Reset crop")]),
+      h("div", { cls: "row" }, [chip({ id: "popout" }, "Pop out cropped window")]),
+      h("div", { cls: "hint", id: "cropHint" }),
+      h("div", { cls: "sep" }),
+      h("div", { cls: "sec", text: "Loop (VODs & clips)" }),
+      h("div", { id: "loopWrap" }, [
+        switchRow({ type: "checkbox", id: "loopEnabled" }, "Loop a segment"),
+        h("div", { cls: "grid", style: "margin-top:7px" }, [
+          field("Start", { type: "text", id: "loopStart", placeholder: "hh:mm:ss" }),
+          field("Stop", { type: "text", id: "loopStop", placeholder: "hh:mm:ss" })
+        ]),
+        h("div", { cls: "row", style: "margin-top:6px" }, [
+          chip({ id: "startNow" }, "Start = now"),
+          chip({ id: "stopNow" }, "Stop = now"),
+          chip({ id: "jumpStart" }, "Jump to start")
+        ]),
+        h("div", { cls: "grid", style: "margin-top:6px" }, [
+          field("Max loops (0 = \u221e)", { type: "number", id: "maxLoops", min: "0", step: "1", value: "0" }),
+          field("Completed", { type: "text", id: "loopCount", readonly: "", value: "0" })
+        ]),
+        h("div", { cls: "hint", id: "loopHint" })
+      ]),
+      h("div", { cls: "hint", id: "liveNote", style: "display:none", text: "Looping is for VODs and clips only." }),
+      h("div", { cls: "sep" }),
+      h("div", { cls: "sec", text: "Chat" }),
+      h("button", { cls: "btn", id: "chatToggle", text: "Unload chat" }),
+      h("div", { cls: "hint", id: "chatHint" })
+    ]);
+
+    return h("div", { cls: "panel", id: "panel" }, [
+      h("div", { cls: "head", id: "head" }, [
+        h("span", { cls: "dot", text: "\u2702" }),
+        h("span", { cls: "name", text: "Twitch Cropper" }),
+        h("button", { cls: "ico", id: "min", title: "Collapse", text: "\u2212" }),
+        h("button", { cls: "ico", id: "close", title: "Hide panel (reopen with the \u2702 button or the toolbar icon)", text: "\u2715" })
+      ]),
+      body,
+      h("div", { cls: "foot" }, [
+        h("span", { id: "scope", text: "Not saved yet" }),
+        h("button", { cls: "link", id: "off", text: "Turn off" }),
+        h("button", { cls: "link", id: "resetAll", text: "Reset" })
+      ])
+    ]);
+  }
+
+  function fabTree() {
+    return h("div", { cls: "fab", id: "fab", title: "Twitch Cropper (Alt+Shift+P)", text: "\u2702" });
+  }
+
 
   /* --------------------------------------------------------------- helpers */
 
@@ -425,9 +482,7 @@
     var style = document.createElement("style");
     style.textContent = PANEL_CSS;
     shadow.appendChild(style);
-    var wrap = document.createElement("div");
-    wrap.innerHTML = PANEL_HTML;
-    while (wrap.firstChild) shadow.appendChild(wrap.firstChild);
+    shadow.appendChild(panelTree());
     return shadow;
   }
 
@@ -679,9 +734,7 @@
     var style = document.createElement("style");
     style.textContent = PANEL_CSS;
     shadow.appendChild(style);
-    var wrap = document.createElement("div");
-    wrap.innerHTML = FAB_HTML;
-    while (wrap.firstChild) shadow.appendChild(wrap.firstChild);
+    shadow.appendChild(fabTree());
     fabEls.fab = shadow.getElementById("fab");
     fabEls.fab.addEventListener("click", togglePanel);
     drag(fabHost, fabEls.fab);
@@ -797,6 +850,11 @@
   ui.togglePanel = togglePanel;
 
   ui.syncInputs = syncInputs;
+
+  // Exposed so test/panel.test.js can verify the panel's structure without a
+  // browser. Not used by the add-on itself.
+  ui.__panelTree = panelTree;
+  ui.__fabTree = fabTree;
 
   ui.setScope = function (key, info) {
     if (!els.scope) return;

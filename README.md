@@ -170,16 +170,43 @@ DRM-protected content — so this extension deliberately doesn't do that.
   `src/core.js` (`TC.pageInfo`, `TC.domChannel`, `pickVideo`/`contentBox`) and the
   marker attributes are `data-tc-target` / `data-tc-crop`.
 
+## Development
+
+No build step: the extension **is** the source. Load `manifest.json` as a
+temporary add-on, or `web-ext run`.
+
+```sh
+node test/run.mjs      # all six suites, no dependencies
+npx web-ext lint       # must report 0 errors, 0 warnings
+npx web-ext build      # writes web-ext-artifacts/twitch_cropper-<version>.zip
+```
+
+`test/fuzz.test.js` is a seeded stress suite that hammers the pure functions with
+NaN, Infinity, null, strings and out-of-range values, and asserts invariants only,
+so any failure is reproducible by iteration index. It found the two
+crop-normalisation bugs fixed here. `test/panel.test.js` walks the panel's DOM
+tree — built with `createElement`, never `innerHTML` — and checks that every
+control the rest of the code looks up by id still exists.
+
+`LISTING.md` and `REVIEWERS.md` are paste-ready text for the AMO submission
+fields. `web-ext-config.cjs` keeps `test/`, this README and those two files out of
+the packaged XPI.
+
 ## Files
 
 ```
 manifest.json         Firefox MV3 manifest
+LICENSE               MIT
+LISTING.md            AMO listing copy (not packaged)
+REVIEWERS.md          notes for AMO reviewers (not packaged)
+web-ext-config.cjs    keeps development files out of the built XPI
 src/core.js           namespace, storage, page/video discovery, crop engine
 src/chat.js           chat unload / load
 src/loop.js           VOD/clip segment looping
 src/panel.js          Shadow-DOM panel, launcher button, drag-to-select overlay
-src/main.js           bootstrap, SPA navigation, resize/reconcile
-src/background.js     toolbar button + keyboard shortcut relay
+src/main.js           bootstrap, SPA navigation, resize/reconcile, popout
+src/background.js     toolbar button, shortcuts, and the popout window
 src/styles.css        the single rule that applies the crop transform
+test/                 six suites and their runner (not packaged)
 icons/icon.svg
 ```

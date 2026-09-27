@@ -189,6 +189,11 @@
 
   /* --------------------------------------------------------- crop defaults */
 
+  // Smallest allowed crop side, as a fraction of the picture. normalizeCrop and
+  // isCropValid must agree on this or a crop sitting exactly on the minimum is
+  // produced and then rejected, and silently stops applying.
+  var MIN_CROP = 0.005;
+
   TC.defaultCrop = function () {
     return { enabled: false, x: 0, y: 0, w: 1, h: 1, mode: "fit" };
   };
@@ -198,10 +203,12 @@
     if (!raw || typeof raw !== "object") return c;
     c.enabled = !!raw.enabled;
     c.mode = raw.mode === "fill" ? "fill" : "fit";
-    c.x = typeof raw.x === "number" ? TC.clamp(raw.x, 0, 1) : 0;
-    c.y = typeof raw.y === "number" ? TC.clamp(raw.y, 0, 1) : 0;
-    c.w = typeof raw.w === "number" ? TC.clamp(raw.w, 0.005, 1) : 1;
-    c.h = typeof raw.h === "number" ? TC.clamp(raw.h, 0.005, 1) : 1;
+    // Number.isFinite, not typeof: typeof NaN is "number", and a NaN that got
+    // into storage would otherwise survive into the CSS and break the crop.
+    c.x = Number.isFinite(raw.x) ? TC.clamp(raw.x, 0, 1) : 0;
+    c.y = Number.isFinite(raw.y) ? TC.clamp(raw.y, 0, 1) : 0;
+    c.w = Number.isFinite(raw.w) ? TC.clamp(raw.w, MIN_CROP, 1) : 1;
+    c.h = Number.isFinite(raw.h) ? TC.clamp(raw.h, MIN_CROP, 1) : 1;
     if (c.x + c.w > 1) c.x = Math.max(0, 1 - c.w);
     if (c.y + c.h > 1) c.y = Math.max(0, 1 - c.h);
     return c;
@@ -212,7 +219,7 @@
       c &&
       typeof c.x === "number" && typeof c.y === "number" &&
       typeof c.w === "number" && typeof c.h === "number" &&
-      c.w > 0.005 && c.h > 0.005 && c.w <= 1.0001 && c.h <= 1.0001 &&
+      c.w >= MIN_CROP && c.h >= MIN_CROP && c.w <= 1.0001 && c.h <= 1.0001 &&
       c.x >= -0.0001 && c.y >= -0.0001 &&
       c.x + c.w <= 1.0001 && c.y + c.h <= 1.0001
     );
