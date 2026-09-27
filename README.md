@@ -5,8 +5,10 @@ the picture you care about — drawn with a simple drag — and can loop a segme
 of a VOD or clip.
 
 - **Off until you switch it on.** A Twitch page loads completely untouched —
-  nothing applied, no extra UI. The toolbar button (or `Alt+Shift+C`) turns it on;
-  your settings are remembered, just not applied until then.
+  nothing applied, no extra UI. The toolbar button (or `Alt+Shift+C`) turns it on.
+- **Numbers are remembered; switches are not.** Each channel keeps its crop
+  rectangle and each video its loop times, but cropping, looping, unloading chat
+  and popping out all start **off**, and are switched on by hand.
 - **Crop by dragging.** Click *Select region*, drag a box over the player, done.
   By default the player is re-shaped to the crop so you see **all** of it; switch
   to *Fill player* if you'd rather the crop fill the player and trim the overhang.
@@ -98,8 +100,8 @@ Twitch's own hide-chat button is purely visual — the chat component stays moun
 and its messages stay in the DOM. The panel's **Chat → Unload chat** button
 instead detaches the whole chat column from the document, which removes it (and
 roughly 80% of the page's DOM nodes) and stops it being laid out and painted.
-**Load chat** puts it back. The choice is remembered, so it is re-applied on
-other Twitch pages.
+**Load chat** puts it back. It is a plain manual toggle and is never remembered,
+so a freshly loaded page always has chat exactly as Twitch made it.
 
 It cannot close Twitch's connection to chat — only Twitch can unmount its own
 component — so treat this as a rendering/CPU saving, not a full teardown. If the

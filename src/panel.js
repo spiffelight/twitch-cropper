@@ -348,14 +348,21 @@
     els.cropHint.classList.remove("warn");
   }
 
+  // Only the numbers are remembered. Whether the crop or the loop is switched
+  // on is a per-session choice, so nothing is applied when the extension starts.
   function persistCrop() {
     if (!TC.state.cropKey) return;
-    persistDebounced(TC.state.cropKey, TC.normalizeCrop(TC.state.crop));
+    var c = TC.normalizeCrop(TC.state.crop);
+    persistDebounced(TC.state.cropKey, { x: c.x, y: c.y, w: c.w, h: c.h, mode: c.mode });
   }
 
   function persistLoop() {
     if (!TC.state.loopKey) return;
-    persistDebounced(TC.state.loopKey, TC.loop.serialize());
+    persistDebounced(TC.state.loopKey, {
+      start: TC.loop.start,
+      stop: TC.loop.stop,
+      maxLoops: TC.loop.maxLoops
+    });
   }
 
   function applyPreset(name) {

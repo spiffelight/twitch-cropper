@@ -17,8 +17,6 @@
   if (!TC || TC.__chatReady) return;
   TC.__chatReady = true;
 
-  var KEY = "tc.chat";
-
   // Ordered from outermost to innermost; the first that matches is detached.
   var CANDIDATES = [
     ".stream-chat",
@@ -62,7 +60,6 @@
       detach(node);
       pref = true;
       lastAttempt = Date.now();
-      TC.setStored(KEY, { unloaded: true });
       TC.log("chat unloaded");
       return true;
     },
@@ -73,7 +70,6 @@
       }
       saved = null;
       pref = false;
-      TC.setStored(KEY, { unloaded: false });
 
       // Nudge Twitch to lay the column out and scroll to the newest message.
       try {
@@ -119,11 +115,11 @@
       TC.log("chat re-unloaded after re-render");
     },
 
+    // Chat state is never remembered: it is a manual toggle, so every load
+    // starts with chat exactly as Twitch made it.
     init: function () {
-      return TC.getStored(KEY, null).then(function (value) {
-        pref = !!(value && value.unloaded);
-        return pref;
-      });
+      pref = false;
+      return Promise.resolve(false);
     }
   };
 })();

@@ -22,6 +22,9 @@
   var scopeToken = 0;
   var reconcileQueued = false;
   var active = false;
+  // Only true inside a popout this extension just opened, which *is* a request
+  // to crop. Everywhere else cropping starts switched off.
+  var forceCropOn = false;
 
   var POP_KEY = "tc.popout";
   var RETURN_HASH = "#tc-active";
@@ -68,7 +71,11 @@
       TC.state.crop = data.crop && TC.isCropValid(data.crop)
         ? TC.normalizeCrop(data.crop)
         : TC.defaultCrop();
+      // The numbers are remembered, the switches are not: cropping and looping
+      // both start switched off when the extension loads.
+      TC.state.crop.enabled = forceCropOn;
       TC.loop.load(data.loop);
+      TC.loop.enabled = false;
       TC.loop.done = false;
       TC.ui.setScope(ck || lk, info);
       TC.ui.syncInputs();
@@ -281,9 +288,12 @@
       start();
       TC.getStored(POP_KEY, null)
         .then(function (req) {
-          // Only act on a popout this extension opened. Twitch's own popout is
-          // left completely alone, so "off by default" still holds.
-          if (!req || !req.ts || Date.now() - req.ts > 3600000) return;
+          // Only act on a popout this extension opened, moments ago. The request
+          // is transient and is cleared as soon as it has been used. Twitch's own
+          // popout, and any older one, is left completely alone.
+          if (!req || !req.ts || Date.now() - req.ts > 60000) return;
+          forceCropOn = true;
+          TC.state.crop.enabled = true;
           setActive(true);
           // window.open's width/height include browser chrome, so correct for
           // it and make the *content* match the crop exactly.
@@ -293,6 +303,8 @@
             window.resizeTo(req.w + chromeW, req.h + chromeH);
           } catch (e) {}
           TC.ui.showReturnBar(req.url || null);
+          clearPopoutRequest();
+          reconcile();
         })
         .catch(function () {});
       return;
