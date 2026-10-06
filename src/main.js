@@ -26,6 +26,9 @@
   // True only inside a popout this extension just opened, which *is* a request
   // to crop. Everywhere else cropping starts switched off.
   var forceCropOn = false;
+  // Likewise, a popout carries over whether the loop was running when it was
+  // opened; the switches are otherwise never carried between page loads.
+  var forceLoopOn = false;
 
   // A popout is identified two independent ways, because losing the marker
   // means an uncropped window with no way back: a `#tc=WxH` marker in the URL,
@@ -80,7 +83,7 @@
       // both start switched off when the extension loads.
       TC.state.crop.enabled = forceCropOn;
       TC.loop.load(data.loop);
-      TC.loop.enabled = false;
+      TC.loop.enabled = forceLoopOn;
       TC.loop.done = false;
       TC.ui.setScope(ck || lk, info);
       TC.ui.syncInputs();
@@ -130,6 +133,7 @@
       path: location.pathname + location.search,
       w: size.width,
       h: size.height,
+      loop: TC.loop.enabled,
       ts: Date.now()
     }).then(function () {
       try {
@@ -146,8 +150,9 @@
 
   // Crop this window and give it a way back. Only ever called when we are sure
   // the popout is one this extension opened, so Twitch's own popout is left be.
-  function beginPopout(width, height) {
+  function beginPopout(width, height, loopOn) {
     forceCropOn = true;
+    forceLoopOn = loopOn === true;
     try {
       history.replaceState(null, "", location.pathname + location.search);
     } catch (e) {}
@@ -162,6 +167,8 @@
     } catch (e) {}
     TC.ui.showReturnBar();
     setActive(true);
+    // The popout has its own small controls; it does not need the launcher.
+    if (TC.ui.hideLauncher) TC.ui.hideLauncher();
     TC.removeStored(POP_KEY);
 
     // If there was nothing saved to crop for this stream, say so rather than
@@ -306,21 +313,20 @@
     // The player-only popout this extension opened: crop it and offer a way out.
     if (TC.isPopout) {
       var m = POPOUT_HASH.exec(location.hash);
-      if (m) {
-        beginPopout(parseInt(m[1], 10), parseInt(m[2], 10));
-        start();
-        return;
-      }
-      // The URL marker did not survive, so fall back to the record written just
-      // before this window was opened.
-      TC.getStored(POP_KEY, null)
-        .then(function (req) {
-          if (TC.isOurPopout(req, location.pathname + location.search, Date.now())) {
-            beginPopout(req.w, req.h);
-          }
-          start();
+      // The panel lives here too, so settings can be changed without leaving.
+      TC.getStored("tc.ui", null)
+        .catch(function () { return null; })
+        .then(function (stored) {
+          TC.ui.init(stored || null);
+          return TC.getStored(POP_KEY, null).catch(function () { return null; });
         })
-        .catch(function () {
+        .then(function (req) {
+          // The size may arrive in the URL, in the record written just before the
+          // window opened, or both; whichever survived is used.
+          var ours = TC.isOurPopout(req, location.pathname + location.search, Date.now());
+          var loopOn = ours ? req.loop === true : false;
+          if (m) beginPopout(parseInt(m[1], 10), parseInt(m[2], 10), loopOn);
+          else if (ours) beginPopout(req.w, req.h, loopOn);
           start();
         });
       return;

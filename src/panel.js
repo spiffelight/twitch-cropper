@@ -50,6 +50,8 @@
     ".btn:hover{background:#3d3d44}",
     ".btn.primary{background:#9147ff}",
     ".btn.primary:hover{background:#772ce8}",
+    ".btn.teal{background:linear-gradient(180deg,#2ad4c0,#12a596);color:#062925;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 10px rgba(18,165,150,.35)}",
+    ".btn.teal:hover{background:linear-gradient(180deg,#41e2ce,#15b3a2)}",
     ".row{display:flex;gap:6px;flex-wrap:wrap}",
     ".chip{all:unset;cursor:pointer;flex:1 1 auto;text-align:center;padding:5px 7px;border-radius:7px;background:#26262c;color:#d3d3d9;font-size:11.5px;white-space:nowrap}",
     ".chip:hover{background:#34343c;color:#fff}",
@@ -71,6 +73,7 @@
     "box-shadow:0 6px 18px rgba(0,0,0,.5);display:grid;place-items:center;cursor:pointer;font-size:17px;user-select:none;touch-action:none}",
     ".fab:hover{border-color:#9147ff}",
     ".fab.active{border-color:#9147ff;background:#1f1230}",
+    ".returnrow{display:flex;gap:6px}",
     ".returnbar{position:relative;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;cursor:pointer;user-select:none;background:rgba(24,24,27,.4);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.14);font:12px/1 -apple-system,'Segoe UI',Roboto,sans-serif;opacity:.3;transition:opacity .15s ease,background .15s ease,border-color .15s ease}",
     ".returnbar:hover{opacity:1;background:rgba(24,24,27,.92);color:#fff;border-color:#9147ff}"
   ].join("");
@@ -146,7 +149,7 @@
         field("Height %", { type: "number", id: "h", min: "0", max: "100", step: "0.5" })
       ]),
       h("div", { cls: "row" }, [chip({ id: "reset" }, "Reset crop")]),
-      h("div", { cls: "row" }, [chip({ id: "popout" }, "Pop out cropped window")]),
+      h("button", { cls: "btn teal", id: "popout", text: "Pop out cropped window" }),
       h("div", { cls: "hint", id: "cropHint" }),
       h("div", { cls: "sep" }),
       h("div", { cls: "sec", text: "Loop (VODs & clips)" }),
@@ -819,6 +822,11 @@
     if (!on) ui.closePanel();
   };
 
+  // The popout window has its own small controls, so it hides the launcher.
+  ui.hideLauncher = function () {
+    if (fabHost) fabHost.style.display = "none";
+  };
+
   // Shown only in the player-only popout window, so there is always a way back.
   var returnHost = null;
   ui.showReturnBar = function () {
@@ -829,14 +837,29 @@
     var style = document.createElement("style");
     style.textContent = PANEL_CSS;
     shadow.appendChild(style);
-    var btn = document.createElement("div");
-    btn.className = "returnbar";
-    btn.textContent = "\u2715";
-    btn.title = "Close this window";
-    btn.addEventListener("click", function () {
-      TC.returnFromPopout();
-    });
-    shadow.appendChild(btn);
+    function roundButton(glyph, title, onClick) {
+      var btn = document.createElement("div");
+      btn.className = "returnbar";
+      btn.textContent = glyph;
+      btn.title = title;
+      btn.addEventListener("click", onClick);
+      return btn;
+    }
+
+    var row = document.createElement("div");
+    row.className = "returnrow";
+    row.appendChild(
+      roundButton("\u2702", "Twitch Cropper settings", function () {
+        TC.ui.togglePanel();
+      })
+    );
+    row.appendChild(
+      roundButton("\u2715", "Close this window", function () {
+        TC.returnFromPopout();
+      })
+    );
+    shadow.appendChild(row);
+
     mountHost(returnHost);
     returnHost.style.left = "auto";
     returnHost.style.right = "8px";

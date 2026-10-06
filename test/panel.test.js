@@ -112,6 +112,11 @@ ok("fit/fill chips", modeChips.join(",") === "fit,fill", modeChips);
 const presets = [];
 walk(panel, (n) => { if (n.attributes && n.attributes["data-preset"]) presets.push(n.attributes["data-preset"]); });
 ok("five presets", presets.join(",") === "left,right,top,bottom,center", presets);
+ok(
+  "the pop out button carries the teal styling",
+  byId(panel, "popout").className === "btn teal",
+  byId(panel, "popout").className
+);
 
 const x = byId(panel, "x");
 ok("x is a bounded number input", x.tagName === "INPUT" && x.attributes.type === "number" && x.attributes.min === "0" && x.attributes.max === "100" && x.attributes.step === "0.5", x.attributes);
