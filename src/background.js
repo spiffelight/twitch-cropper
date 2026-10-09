@@ -42,8 +42,25 @@ browser.commands.onCommand.addListener((command) => {
  * crop once the page can measure its own chrome; "tc-return" puts the tab back
  * into a normal window and restores the regular Twitch page.
  */
-browser.runtime.onMessage.addListener((msg, sender) => {
-  if (!msg || !msg.type || !sender || !sender.tab || sender.tab.id == null) return;
+browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || !msg.type) return;
+
+  /*
+   * Firefox lets the user revoke the hosts in `host_permissions`, and with them
+   * revoked the content script only runs in a tab that was clicked, which leaves
+   * the popout window with nothing in it. Check, and ask if it is missing.
+   */
+  if (msg.type === "tc-ensure-access") {
+    const origins = ["https://twitch.tv/*", "https://*.twitch.tv/*"];
+    browser.permissions
+      .contains({ origins: origins })
+      .then((granted) => (granted ? true : browser.permissions.request({ origins: origins })))
+      .then((ok) => sendResponse(!!ok))
+      .catch(() => sendResponse(false));
+    return true; // reply asynchronously
+  }
+
+  if (!sender || !sender.tab || sender.tab.id == null) return;
   const tabId = sender.tab.id;
   const windowId = sender.tab.windowId;
 

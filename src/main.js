@@ -29,6 +29,8 @@
   // Likewise, a popout carries over whether the loop was running when it was
   // opened; the switches are otherwise never carried between page loads.
   var forceLoopOn = false;
+  // True in the player-only popout window, however it was opened.
+  var popoutWindow = TC.isPopout === true;
 
   // A popout is identified two independent ways, because losing the marker
   // means an uncropped window with no way back: a `#tc=WxH` marker in the URL,
@@ -76,12 +78,12 @@
       });
     }).then(function (data) {
       if (token !== scopeToken) return;
-      TC.state.crop = data.crop && TC.isCropValid(data.crop)
-        ? TC.normalizeCrop(data.crop)
-        : TC.defaultCrop();
+      var saved = !!(data.crop && TC.isCropValid(data.crop));
+      TC.state.crop = saved ? TC.normalizeCrop(data.crop) : TC.defaultCrop();
       // The numbers are remembered, the switches are not: cropping and looping
-      // both start switched off when the extension loads.
-      TC.state.crop.enabled = forceCropOn;
+      // both start switched off when the extension loads. A popout window is the
+      // one exception, and only when something is actually saved to crop there.
+      TC.state.crop.enabled = forceCropOn && (saved || !popoutWindow);
       TC.loop.load(data.loop);
       TC.loop.enabled = forceLoopOn;
       TC.loop.done = false;
@@ -101,15 +103,16 @@
     if (active) {
       TC.applyCrop();
       if (TC.loop.enabled && TC.canLoopHere() && !TC.loop.done) TC.loop.startRuntime();
-      TC.chat.reconcile();
+      try { TC.chat.reconcile(); } catch (e) {}
     } else {
       TC.clearCrop();
       TC.loop.stopRuntime();
-      TC.chat.suspend();
+      try { TC.chat.suspend(); } catch (e) {}
     }
 
-    TC.ui.setActive(active);
-    TC.ui.syncInputs();
+    // The panel is optional. Nothing it does may stop the crop from working.
+    try { TC.ui.setActive(active); } catch (e) {}
+    try { TC.ui.syncInputs(); } catch (e) {}
   }
 
   TC.setActive = setActive;
@@ -156,28 +159,34 @@
     try {
       history.replaceState(null, "", location.pathname + location.search);
     } catch (e) {}
-    try {
-      var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
-      var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
-      browser.runtime.sendMessage({
-        type: "tc-resize",
-        width: Math.round(width) + chromeW,
-        height: Math.round(height) + chromeH
-      });
-    } catch (e) {}
-    TC.ui.showReturnBar();
+    if (width && height) {
+      try {
+        var chromeW = Math.max(0, window.outerWidth - window.innerWidth);
+        var chromeH = Math.max(0, window.outerHeight - window.innerHeight);
+        browser.runtime.sendMessage({
+          type: "tc-resize",
+          width: Math.round(width) + chromeW,
+          height: Math.round(height) + chromeH
+        });
+      } catch (e) {}
+    }
+    try { TC.ui.showReturnBar(); } catch (e) {}
     setActive(true);
     // The popout has its own small controls; it does not need the launcher.
-    if (TC.ui.hideLauncher) TC.ui.hideLauncher();
+    try { if (TC.ui.hideLauncher) TC.ui.hideLauncher(); } catch (e) {}
     TC.removeStored(POP_KEY);
 
     // If there was nothing saved to crop for this stream, say so rather than
     // leaving a plain window behind with no explanation.
     setTimeout(function () {
       try {
-        if (!TC.state.cropKey && TC.ui.toast) TC.ui.toast("No crop saved for this stream yet.");
+        // Put the answer in the window's own title bar, so whether this window
+        // is cropped is visible without opening anything.
+        var on = document.documentElement.getAttribute("data-tc-crop") === "on";
+        document.title = on ? "Twitch Cropper \u00b7 cropped" : "Twitch Cropper \u00b7 nothing saved to crop";
+        if (!on && TC.ui.toast) TC.ui.toast("No crop saved for this stream yet.");
       } catch (e) {}
-    }, 2500);
+    }, 3000);
   }
 
   // Hand the tab back: the background moves it to a normal window if there is
@@ -325,8 +334,21 @@
           // window opened, or both; whichever survived is used.
           var ours = TC.isOurPopout(req, location.pathname + location.search, Date.now());
           var loopOn = ours ? req.loop === true : false;
+          // Any player-only window is cropped: it is a bare view of a stream,
+          // and a stream with nothing saved is left exactly as it is. Using the
+          // window is what matters, not how it was opened.
           if (m) beginPopout(parseInt(m[1], 10), parseInt(m[2], 10), loopOn);
           else if (ours) beginPopout(req.w, req.h, loopOn);
+          else beginPopout(null, null, false);
+          start();
+        })
+        .catch(function () {
+          // Whatever failed above - the panel not building, say - the crop still
+          // has to happen, and the window still needs a way back.
+          try {
+            if (m) beginPopout(parseInt(m[1], 10), parseInt(m[2], 10), false);
+            else beginPopout(null, null, false);
+          } catch (e) {}
           start();
         });
       return;

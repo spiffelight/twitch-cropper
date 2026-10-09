@@ -73,8 +73,10 @@
     "box-shadow:0 6px 18px rgba(0,0,0,.5);display:grid;place-items:center;cursor:pointer;font-size:17px;user-select:none;touch-action:none}",
     ".fab:hover{border-color:#9147ff}",
     ".fab.active{border-color:#9147ff;background:#1f1230}",
-    ".returnrow{display:flex;gap:6px}",
-    ".returnbar{position:relative;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;cursor:pointer;user-select:none;background:rgba(24,24,27,.4);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.14);font:12px/1 -apple-system,'Segoe UI',Roboto,sans-serif;opacity:.3;transition:opacity .15s ease,background .15s ease,border-color .15s ease}",
+    // Fades in as the window opens, so the eye catches it, then settles.
+    ".returnrow{display:flex;gap:6px;animation:tc-show 1.8s ease-out .3s both}",
+    "@keyframes tc-show{from{opacity:1}to{opacity:.55}}",
+    ".returnbar{position:relative;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;cursor:pointer;user-select:none;background:rgba(24,24,27,.4);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.14);font:12px/1 -apple-system,'Segoe UI',Roboto,sans-serif;opacity:.55;transition:opacity .15s ease,background .15s ease,border-color .15s ease}",
     ".returnbar:hover{opacity:1;background:rgba(24,24,27,.92);color:#fff;border-color:#9147ff}"
   ].join("");
 
@@ -216,11 +218,13 @@
     if (host.parentNode !== target) target.appendChild(host);
   }
 
-  function place(host, pos, fallback) {
+  // `hintW`/`hintH` stand in when the host is hidden, where it measures zero: a
+  // closed 262px panel clamped as if it were 40px wide ends up off the screen.
+  function place(host, pos, fallback, hintW, hintH) {
     var p = pos || fallback;
     var rect = host.getBoundingClientRect();
-    var w = rect.width || 40;
-    var h = rect.height || 40;
+    var w = rect.width || hintW || 40;
+    var h = rect.height || hintH || 40;
     var x = TC.clamp(p.x, 6, Math.max(6, window.innerWidth - w - 6));
     var y = TC.clamp(p.y, 6, Math.max(6, window.innerHeight - h - 6));
     host.style.left = x + "px";
@@ -537,9 +541,19 @@
     });
 
     els.popout.addEventListener("click", function () {
-      var result = TC.enterPopout();
-      if (result === "blocked") toast("Pop-up blocked \u2014 allow pop-ups for twitch.tv, then try again.");
-      else if (!result) toast("Open a channel or VOD first.");
+      // The popout is its own tab, so the add-on needs standing access to
+      // twitch.tv rather than the temporary access a click gives this one tab.
+      TC.ensureHostAccess().then(function (granted) {
+        if (!granted) {
+          toast(
+            "Twitch Cropper needs access to twitch.tv for the popout. " +
+              "Turn it on in about:addons, then try again."
+          );
+          return;
+        }
+        var result = TC.enterPopout();
+        if (!result) toast("Open a channel or VOD first.");
+      });
     });
 
     els.reset.addEventListener("click", function () {
@@ -777,8 +791,8 @@
     wirePanel(panelHost.shadowRoot);
     mountHost(fabHost);
     mountHost(panelHost);
-    place(fabHost, uiSettings.fabPos, defaultFabPos());
-    place(panelHost, uiSettings.panelPos, defaultPanelPos());
+    place(fabHost, uiSettings.fabPos, defaultFabPos(), 40, 40);
+    place(panelHost, uiSettings.panelPos, defaultPanelPos(), 262, 220);
     els.panel.classList.toggle("collapsed", uiSettings.collapsed);
     // Never open by itself, and hide the launcher until the extension is on, so
     // a freshly loaded Twitch page looks completely untouched.
@@ -789,8 +803,8 @@
     syncInputs();
 
     window.addEventListener("resize", function () {
-      place(fabHost, { x: parseFloat(fabHost.style.left) || 0, y: parseFloat(fabHost.style.top) || 0 }, defaultFabPos());
-      place(panelHost, { x: parseFloat(panelHost.style.left) || 0, y: parseFloat(panelHost.style.top) || 0 }, defaultPanelPos());
+      place(fabHost, { x: parseFloat(fabHost.style.left) || 0, y: parseFloat(fabHost.style.top) || 0 }, defaultFabPos(), 40, 40);
+      place(panelHost, { x: parseFloat(panelHost.style.left) || 0, y: parseFloat(panelHost.style.top) || 0 }, defaultPanelPos(), 262, 220);
     });
     document.addEventListener("fullscreenchange", function () {
       mountHost(fabHost);
@@ -868,6 +882,17 @@
 
   ui.openPanel = function () {
     uiSettings.open = true;
+    // Bring it back on screen first: a window that shrank since the panel was
+    // last used can leave its saved position past the right edge.
+    if (panelHost) {
+      place(
+        panelHost,
+        { x: parseFloat(panelHost.style.left) || 0, y: parseFloat(panelHost.style.top) || 0 },
+        defaultPanelPos(),
+        262,
+        220
+      );
+    }
     if (panelHost) panelHost.style.display = "";
     if (fabEls.fab) fabEls.fab.classList.add("active");
     syncInputs();

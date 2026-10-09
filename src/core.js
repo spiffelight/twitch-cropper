@@ -484,6 +484,33 @@
     return true;
   };
 
+  /*
+   * Firefox lets the user grant or revoke the hosts in `host_permissions`. With
+   * them revoked, the content script only runs in a tab where the user clicked
+   * the toolbar button - so the popout, a new tab nobody clicked in, gets
+   * nothing and fails silently. Ask for them when we notice they are missing.
+   *
+   * Browsers only allow the request from a user action, so this is called from
+   * the popout button; anywhere else it simply reports what it found.
+   */
+  TC.ensureHostAccess = function () {
+    // The permissions API lives in the background page, so ask it. Failures are
+    // treated as "carry on": never block the popout on a check that cannot run.
+    try {
+      if (!browser.runtime || !browser.runtime.sendMessage) return Promise.resolve(true);
+      return browser.runtime
+        .sendMessage({ type: "tc-ensure-access" })
+        .then(function (granted) {
+          return granted !== false;
+        })
+        .catch(function () {
+          return true;
+        });
+    } catch (e) {
+      return Promise.resolve(true);
+    }
+  };
+
   // Where the popout should send its window back to.
   TC.returnUrl = function () {
     var info = TC.pageInfo();
